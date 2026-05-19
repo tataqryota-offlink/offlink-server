@@ -7,6 +7,7 @@ const express  = require('express');
 const cors     = require('cors');
 const helmet   = require('helmet');
 const { Pool } = require('pg');
+const rateLimit    = require('express-rate-limit');
 
 const app  = express();
 const port = process.env.PORT || 3000;
@@ -17,6 +18,32 @@ const port = process.env.PORT || 3000;
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+// ─────────────────────────────────────────────
+// RATE LIMITING
+// ─────────────────────────────────────────────
+
+// Global — semua endpoint max 100 request/menit per IP
+const globalLimiter = rateLimit({
+  windowMs : 60 * 1000,
+  max      : 100,
+  message  : { error: 'Terlalu banyak request. Coba lagi dalam 1 menit.' },
+});
+app.use(globalLimiter);
+
+// TX check — max 30 request/menit per IP
+const txLimiter = rateLimit({
+  windowMs : 60 * 1000,
+  max      : 30,
+  message  : { error: 'Terlalu banyak percobaan scan. Coba lagi dalam 1 menit.' },
+});
+
+// Device register — max 5 request/jam per IP (anti spam registrasi)
+const registerLimiter = rateLimit({
+  windowMs : 60 * 60 * 1000,
+  max      : 5,
+  message  : { error: 'Terlalu banyak pendaftaran perangkat. Coba lagi dalam 1 jam.' },
+});  
 
 // ─────────────────────────────────────────────
 // DATABASE
@@ -74,7 +101,7 @@ app.get('/', (req, res) => {
 });
 
 // 1. DAFTARKAN PERANGKAT
-app.post('/device/register', async (req, res) => {
+app.post('/device/register', registerLimiter, async (req, res) => {
   const { deviceId, publicKey } = req.body;
   if (!deviceId || !publicKey)
     return res.status(400).json({ error: 'deviceId dan publicKey wajib diisi' });
@@ -92,7 +119,7 @@ app.post('/device/register', async (req, res) => {
 });
 
 // 2. CEK DAN SIMPAN NONCE — anti double spend
-app.post('/nonce/verify', async (req, res) => {
+app.post('/nonce/verify', nonceLimiter, async (req, res) => {
   const { deviceId, nonce } = req.body;
   if (!deviceId || nonce === undefined)
     return res.status(400).json({ error: 'deviceId dan nonce wajib diisi' });
@@ -119,7 +146,7 @@ app.post('/nonce/verify', async (req, res) => {
 });
 
 // 3. CEK DAN TANDAI TX ID — anti double scan
-app.post('/tx/check', async (req, res) => {
+app.post('/tx/check', txLimiter, async (req, res) => {
   const { txId } = req.body;
   if (!txId)
     return res.status(400).json({ error: 'txId wajib diisi' });
@@ -176,7 +203,7 @@ app.get('/tx/history/:deviceId', async (req, res) => {
 
 // 6. SERVER TIME — TrustClock
 app.get('/time', (req, res) => {
-  res.json({ serverTime: Date.now() });
+  res.json({ serverTime: Math.floor(Date.now() / 1000) });
 });
 
 // ─────────────────────────────────────────────
