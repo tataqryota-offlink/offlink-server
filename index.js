@@ -43,7 +43,14 @@ const registerLimiter = rateLimit({
   windowMs : 60 * 60 * 1000,
   max      : 5,
   message  : { error: 'Terlalu banyak pendaftaran perangkat. Coba lagi dalam 1 jam.' },
-});  
+});
+
+// ✅ FIX 1: nonceLimiter DITAMBAHKAN — sebelumnya tidak ada, menyebabkan server crash
+const nonceLimiter = rateLimit({
+  windowMs : 60 * 1000,
+  max      : 50,
+  message  : { error: 'Terlalu banyak request nonce. Coba lagi dalam 1 menit.' },
+});
 
 // ─────────────────────────────────────────────
 // DATABASE
@@ -58,6 +65,11 @@ const pool = new Pool({
 // ─────────────────────────────────────────────
 async function initDB() {
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS blocked_devices (
+      device_id TEXT PRIMARY KEY,
+      blocked_at TIMESTAMP DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS devices (
       id           SERIAL PRIMARY KEY,
       device_id    TEXT UNIQUE NOT NULL,
@@ -204,6 +216,125 @@ app.get('/tx/history/:deviceId', async (req, res) => {
 // 6. SERVER TIME — TrustClock
 app.get('/time', (req, res) => {
   res.json({ serverTime: Math.floor(Date.now() / 1000) });
+});
+
+// ─────────────────────────────────────────────
+// ADMIN — Static files
+// ─────────────────────────────────────────────
+const path = require('path');
+app.use('/admin', express.static(path.join(__dirname, 'public')));
+
+// ─────────────────────────────────────────────
+// ADMIN AUTH
+// ─────────────────────────────────────────────
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'offlink2024';
+
+app.post('/admin/api/login', (req, res) => {
+  const { username, password } = req.body;
+  if (username === ADMIN_USER && password === ADMIN_PASS) {
+    res.json({ success: true, token: Buffer.from(`${username}:${password}`).toString('base64') });
+  } else {
+    res.status(401).json({ success: false, message: 'Username atau password salah' });
+  }
+});
+
+// Middleware cek token admin
+function adminAuth(req, res, next) {
+  const auth = req.headers['x-admin-token'];
+  const expected = Buffer.from(`${ADMIN_USER}:${ADMIN_PASS}`).toString('base64');
+  if (auth === expected) return next();
+  res.status(403).json({ error: 'Unauthorized' });
+}
+
+// ─────────────────────────────────────────────
+// ADMIN API — Statistik
+// ─────────────────────────────────────────────
+app.get('/admin/api/stats', adminAuth, async (req, res) => {
+  try {
+    const [users, txTotal, txToday] = await Promise.all([
+      pool.query('SELECT COUNT(*) FROM devices'),
+      pool.query('SELECT COUNT(*), COALESCE(SUM(amount),0) as total FROM transactions'),
+      pool.query("SELECT COUNT(*) FROM transactions WHERE created_at >= NOW() - INTERVAL '24 hours'"),
+    ]);
+    res.json({
+      totalUsers  : parseInt(users.rows[0].count),
+      totalTx     : parseInt(txTotal.rows[0].count),
+      totalVolume : parseInt(txTotal.rows[0].total),
+      txToday     : parseInt(txToday.rows[0].count),
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────────
+// ADMIN API — Users
+// ─────────────────────────────────────────────
+app.get('/admin/api/users', adminAuth, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT d.device_id, d.created_at,
+        (SELECT COUNT(*) FROM transactions WHERE sender_id=d.device_id OR receiver_id=d.device_id) as tx_count,
+        (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE receiver_id=d.device_id) -
+        (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE sender_id=d.device_id) as saldo_approx,
+        EXISTS(SELECT 1 FROM blocked_devices WHERE device_id=d.device_id) as blocked
+      FROM devices d ORDER BY d.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/admin/api/users/block', adminAuth, async (req, res) => {
+  try {
+    const { device_id } = req.body;
+    await pool.query(
+      'INSERT INTO blocked_devices(device_id) VALUES($1) ON CONFLICT DO NOTHING',
+      [device_id]
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ✅ FIX 2: Route unblock DIPERBAIKI — sebelumnya berisi kode query transaksi (copy-paste error)
+app.post('/admin/api/users/unblock', adminAuth, async (req, res) => {
+  try {
+    const { device_id } = req.body;
+    await pool.query(
+      'DELETE FROM blocked_devices WHERE device_id=$1',
+      [device_id]
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ✅ FIX 3: Route /admin/api/transactions DITAMBAHKAN — sebelumnya tidak ada sama sekali
+// ─────────────────────────────────────────────
+// ADMIN API — Transaksi
+// ─────────────────────────────────────────────
+app.get('/admin/api/transactions', adminAuth, async (req, res) => {
+  try {
+    const { limit = 100, offset = 0, search = '' } = req.query;
+    const result = await pool.query(`
+      SELECT * FROM transactions
+      WHERE sender_id ILIKE $3 OR receiver_id ILIKE $3 OR tx_id ILIKE $3
+      ORDER BY created_at DESC LIMIT $1 OFFSET $2
+    `, [limit, offset, `%${search}%`]);
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────────
+// ADMIN API — Chart data (7 hari terakhir)
+// ─────────────────────────────────────────────
+app.get('/admin/api/chart', adminAuth, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT DATE(created_at) as date, COUNT(*) as count, SUM(amount) as volume
+      FROM transactions
+      WHERE created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY DATE(created_at) ORDER BY date ASC
+    `);
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─────────────────────────────────────────────
