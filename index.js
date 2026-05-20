@@ -285,7 +285,9 @@ app.post('/admin/login', (req, res) => {
   ) {
     const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '8h' });
     return res.json({ success: true, token });
-  });
+  }
+  return res.status(401).json({ error: 'Username atau password salah' });  
+});
   
 // STATISTIK RINGKASAN
 app.get('/admin/stats', adminAuth, async (req, res) => {
