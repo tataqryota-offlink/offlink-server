@@ -4,6 +4,7 @@
 
 require('dotenv').config();
 const express  = require('express');
+const jwt      = require('jsonwebtoken');
 const cors     = require('cors');
 const helmet   = require('helmet');
 const { Pool } = require('pg');
@@ -57,6 +58,22 @@ const nonceLimiter = rateLimit({
 });
 
 // ─────────────────────────────────────────────
+// ADMIN AUTH MIDDLEWARE
+// ─────────────────────────────────────────────
+function adminAuth(req, res, next) {
+  const auth = req.headers['authorization'];
+  if (!auth) return res.status(401).json({ error: 'Token tidak ada' });
+  const token = auth.replace('Bearer ', '');
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'admin') return res.status(403).json({ error: 'Bukan admin' });
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Token tidak valid' });
+  }
+}      
+
+// ─────────────────────────────────────────────
 // DATABASE
 // ─────────────────────────────────────────────
 const pool = new Pool({
@@ -103,13 +120,46 @@ async function initDB() {
       last_nonce   BIGINT DEFAULT 0,
       updated_at   TIMESTAMP DEFAULT NOW()
     );
-  `);
-  console.log('✅ Database tables ready');
+  
+    CREATE TABLE IF NOT EXISTS device_status (
+      device_id    TEXT PRIMARY KEY,
+      status       TEXT DEFAULT 'active',
+      reason       TEXT DEFAULT '',
+      updated_at   TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS disputes (
+      id            SERIAL PRIMARY KEY,
+      reporter_id   TEXT NOT NULL,
+      tx_id         TEXT NOT NULL,
+      issue_type    TEXT NOT NULL,
+      description   TEXT DEFAULT '',
+      status        TEXT DEFAULT 'pending',
+      admin_note    TEXT DEFAULT '',
+      created_at    TIMESTAMP DEFAULT NOW(),
+      resolved_at   TIMESTAMP
+    );
+    
+    CREATE TABLE IF NOT EXISTS top_up_fees (
+      id              SERIAL PRIMARY KEY,
+      device_id       TEXT NOT NULL,
+      top_up_amount   BIGINT NOT NULL,
+      fee_amount      BIGINT NOT NULL,
+      created_at      TIMESTAMP DEFAULT NOW()
+    );
+ `);
+ console.log('✅ Database tables ready');
 }
 
 // ─────────────────────────────────────────────
 // ROUTES
 // ─────────────────────────────────────────────
+
+// Serve admin dashboard
+const path = require('path');
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
 
 // Health check
 app.get('/', (req, res) => {
@@ -220,6 +270,181 @@ app.get('/tx/history/:deviceId', async (req, res) => {
 // 6. SERVER TIME — TrustClock
 app.get('/time', (req, res) => {
   res.json({ serverTime: Math.floor(Date.now() / 1000) });
+});
+
+// ─────────────────────────────────────────────
+// ADMIN ROUTES
+// ─────────────────────────────────────────────
+
+// LOGIN ADMIN
+app.post('/admin/login', (req, res) => {
+  const { username, password } = req.body;
+  if (
+    username === process.env.ADMIN_USERNAME &&
+    password === process.env.ADMIN_PASSWORD
+  ) {
+    const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '8h' });
+    return res.json({ success: true, token });
+  });
+  
+// STATISTIK RINGKASAN
+app.get('/admin/stats', adminAuth, async (req, res) => {
+  try {
+    const txCount    = await pool.query('SELECT COUNT(*) FROM transactions');
+    const devCount   = await pool.query('SELECT COUNT(*) FROM devices');
+    const lockedCount= await pool.query("SELECT COUNT(*) FROM device_status WHERE status='locked'");
+    const pendingDis = await pool.query("SELECT COUNT(*) FROM disputes WHERE status='pending'");
+    const totalFee   = await pool.query('SELECT COALESCE(SUM(fee_amount),0) as total FROM top_up_fees');
+    const todayFee   = await pool.query(
+      "SELECT COALESCE(SUM(fee_amount),0) as total FROM top_up_fees WHERE created_at >= NOW() - INTERVAL '1 day'"
+    );
+    res.json({
+      totalTransactions : parseInt(txCount.rows[0].count),
+      totalDevices      : parseInt(devCount.rows[0].count),
+      lockedDevices     : parseInt(lockedCount.rows[0].count),
+      pendingDisputes   : parseInt(pendingDis.rows[0].count),
+      totalFee          : parseInt(totalFee.rows[0].total),
+      todayFee          : parseInt(todayFee.rows[0].total),  
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+  
+// SEMUA TRANSAKSI
+app.get('/admin/transactions', adminAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM transactions ORDER BY created_at DESC LIMIT 100'
+    );
+    res.json({ success: true, transactions: result.rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// SEMUA PERANGKAT
+app.get('/admin/devices', adminAuth, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT d.device_id, d.public_key, d.created_at,
+             COALESCE(ds.status, 'active') as status,
+             COALESCE(ds.reason, '') as reason,
+             (SELECT COUNT(*) FROM transactions WHERE sender_id = d.device_id OR receiver_id = d.device_id) as tx_count
+      FROM devices d
+      LEFT JOIN device_status ds ON d.device_id = ds.device_id
+      ORDER BY d.created_at DESC
+    `);
+    res.json({ success: true, devices: result.rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// KUNCI PERANGKAT
+app.post('/admin/device/lock', adminAuth, async (req, res) => {
+  const { deviceId, reason } = req.body;
+  if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
+  try {
+    await pool.query(
+      `INSERT INTO device_status (device_id, status, reason, updated_at)
+       VALUES ($1, 'locked', $2, NOW())
+       ON CONFLICT (device_id) DO UPDATE SET status='locked', reason=$2, updated_at=NOW()`,
+      [deviceId, reason || 'Dikunci oleh admin']
+    );
+    res.json({ success: true, message: 'Perangkat dikunci' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// BUKA KUNCI PERANGKAT
+app.post('/admin/device/unlock', adminAuth, async (req, res) => {
+  const { deviceId } = req.body;
+  if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
+  try {
+    await pool.query(
+      `INSERT INTO device_status (device_id, status, reason, updated_at)
+       VALUES ($1, 'active', '', NOW())
+       ON CONFLICT (device_id) DO UPDATE SET status='active', reason='', updated_at=NOW()`,
+      [deviceId]
+    );
+    res.json({ success: true, message: 'Perangkat dibuka' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// SEMUA LAPORAN DISPUTE
+app.get('/admin/disputes', adminAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM disputes ORDER BY created_at DESC'
+    );
+    res.json({ success: true, disputes: result.rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// SELESAIKAN DISPUTE
+app.put('/admin/dispute/:id/resolve', adminAuth, async (req, res) => {
+  const { id } = req.params;
+  const { status, adminNote } = req.body;
+  // status: resolved_refund, resolved_hangus, rejected
+  if (!status) return res.status(400).json({ error: 'status wajib diisi' });
+  try {
+    await pool.query(
+      `UPDATE disputes SET status=$1, admin_note=$2, resolved_at=NOW() WHERE id=$3`,
+      [status, adminNote || '', id]
+    );
+    res.json({ success: true, message: 'Dispute diselesaikan' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// SEMUA DATA FEE
+app.get('/admin/fees', adminAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM top_up_fees ORDER BY created_at DESC LIMIT 100'
+    );
+    const total = await pool.query('SELECT COALESCE(SUM(fee_amount),0) as total FROM top_up_fees');
+    res.json({ success: true, fees: result.rows, totalFee: parseInt(total.rows[0].total) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────────
+// ROUTES DIPANGGIL DARI APP FLUTTER
+// ─────────────────────────────────────────────
+
+// CEK STATUS PERANGKAT (dipanggil app saat online)
+app.get('/device/status/:deviceId', async (req, res) => {
+  const { deviceId } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT status, reason FROM device_status WHERE device_id = $1',
+      [deviceId]
+    );
+    if (result.rows.length === 0) return res.json({ status: 'active', reason: '' });
+    res.json({ status: result.rows[0].status, reason: result.rows[0].reason });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// BUAT LAPORAN DISPUTE (dipanggil app)
+app.post('/dispute/create', async (req, res) => {
+  const { reporterId, txId, issueType, description } = req.body;
+  if (!reporterId || !txId || !issueType)
+    return res.status(400).json({ error: 'reporterId, txId, issueType wajib diisi' });
+  try {
+    await pool.query(
+      `INSERT INTO disputes (reporter_id, tx_id, issue_type, description)
+       VALUES ($1, $2, $3, $4)`,
+      [reporterId, txId, issueType, description || '']
+    );
+    res.json({ success: true, message: 'Laporan terkirim' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// CATAT FEE TOP UP (dipanggil server Midtrans webhook nanti)
+app.post('/topup/fee', async (req, res) => {
+  const { deviceId, topUpAmount, feeAmount } = req.body;
+  if (!deviceId || !topUpAmount || !feeAmount)
+    return res.status(400).json({ error: 'Semua field wajib diisi' });
+  try {
+    await pool.query(
+      'INSERT INTO top_up_fees (device_id, top_up_amount, fee_amount) VALUES ($1, $2, $3)',
+      [deviceId, topUpAmount, feeAmount]
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─────────────────────────────────────────────

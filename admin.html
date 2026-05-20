@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OFFLINK Admin Dashboard</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',sans-serif; background:#0F1B2D; color:#E8F0FE; min-height:100vh; }
+  
+  /* LOGIN */
+  #loginPage { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  .loginBox { background:#142B4E; border:1px solid #2A5298; border-radius:16px; padding:40px; width:360px; }
+  .loginBox h1 { font-size:24px; font-weight:700; letter-spacing:3px; margin-bottom:4px; }
+  .loginBox p { color:#7AABF0; font-size:13px; margin-bottom:28px; }
+  .formGroup { margin-bottom:16px; }
+  .formGroup label { display:block; font-size:12px; color:#7AABF0; margin-bottom:6px; }
+  .formGroup input { width:100%; padding:10px 14px; background:#0F1B2D; border:1px solid #2A5298; border-radius:8px; color:#E8F0FE; font-size:14px; outline:none; }
+  .formGroup input:focus { border-color:#1A73E8; }
+  .btnPrimary { width:100%; padding:12px; background:#1A73E8; color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; margin-top:8px; }
+  .btnPrimary:hover { background:#1557B0; }
+  .loginError { color:#ff6b6b; font-size:13px; margin-top:10px; text-align:center; display:none; }
+
+  /* MAIN LAYOUT */
+  #mainPage { display:none; flex-direction:row; min-height:100vh; }
+  
+  /* SIDEBAR */
+  .sidebar { width:220px; background:#0A1628; border-right:1px solid #1E3A5F; padding:24px 0; flex-shrink:0; }
+  .sidebarTitle { padding:0 20px 20px; font-size:18px; font-weight:700; letter-spacing:2px; border-bottom:1px solid #1E3A5F; }
+  .sidebarTitle span { color:#7AABF0; font-size:11px; display:block; font-weight:400; letter-spacing:1px; }
+  .navItem { display:flex; align-items:center; gap:10px; padding:12px 20px; cursor:pointer; font-size:14px; color:#7AABF0; border-left:3px solid transparent; }
+  .navItem:hover { background:#142B4E; color:#E8F0FE; }
+  .navItem.active { background:#142B4E; color:#E8F0FE; border-left:3px solid #1A73E8; }
+  .navIcon { font-size:18px; width:22px; }
+  .sidebarFooter { padding:20px; margin-top:auto; border-top:1px solid #1E3A5F; }
+  .btnLogout { width:100%; padding:8px; background:transparent; border:1px solid #2A5298; border-radius:8px; color:#7AABF0; font-size:13px; cursor:pointer; }
+  .btnLogout:hover { background:#1E3A5F; color:#E8F0FE; }
+
+  /* CONTENT */
+  .content { flex:1; padding:28px; overflow-y:auto; }
+  .pageTitle { font-size:20px; font-weight:700; margin-bottom:6px; }
+  .pageSubtitle { color:#7AABF0; font-size:13px; margin-bottom:24px; }
+  
+  /* STATS CARDS */
+  .statsGrid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:28px; }
+  .statCard { background:#142B4E; border:1px solid #2A5298; border-radius:12px; padding:20px; }
+  .statLabel { font-size:12px; color:#7AABF0; margin-bottom:8px; }
+  .statValue { font-size:26px; font-weight:700; color:#E8F0FE; }
+  .statSub { font-size:12px; color:#4A9EFF; margin-top:4px; }
+
+  /* TABLE */
+  .tableWrap { background:#142B4E; border:1px solid #2A5298; border-radius:12px; overflow:hidden; }
+  .tableHeader { padding:16px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1E3A5F; }
+  .tableHeader h3 { font-size:15px; font-weight:600; }
+  .btnRefresh { padding:6px 14px; background:#1A73E8; border:none; border-radius:6px; color:#fff; font-size:12px; cursor:pointer; }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:10px 16px; font-size:11px; color:#7AABF0; text-align:left; border-bottom:1px solid #1E3A5F; font-weight:600; text-transform:uppercase; }
+  td { padding:10px 16px; font-size:13px; color:#E8F0FE; border-bottom:1px solid #1E3A5F; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:#1E3A5F22; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge.active   { background:#1a4a1a; color:#4ade80; }
+  .badge.locked   { background:#4a1a1a; color:#f87171; }
+  .badge.pending  { background:#4a3a1a; color:#fbbf24; }
+  .badge.resolved_refund  { background:#1a4a1a; color:#4ade80; }
+  .badge.resolved_hangus  { background:#2a2a4a; color:#818cf8; }
+  .badge.rejected { background:#3a2a2a; color:#fb923c; }
+  .btnSm { padding:4px 10px; border:none; border-radius:5px; font-size:11px; cursor:pointer; margin-right:4px; }
+  .btnLock   { background:#4a1a1a; color:#f87171; }
+  .btnUnlock { background:#1a4a1a; color:#4ade80; }
+  .btnResolve{ background:#1a3a4a; color:#4A9EFF; }
+
+  /* MODAL */
+  .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#00000088; z-index:100; align-items:center; justify-content:center; }
+  .modal.show { display:flex; }
+  .modalBox { background:#142B4E; border:1px solid #2A5298; border-radius:14px; padding:28px; width:420px; }
+  .modalBox h3 { font-size:16px; font-weight:700; margin-bottom:16px; }
+  .modalBox select, .modalBox textarea, .modalBox input { width:100%; padding:9px 12px; background:#0F1B2D; border:1px solid #2A5298; border-radius:7px; color:#E8F0FE; font-size:13px; outline:none; margin-bottom:12px; }
+  .modalBox textarea { height:80px; resize:none; }
+  .modalActions { display:flex; gap:10px; margin-top:4px; }
+  .btnCancel { flex:1; padding:10px; background:transparent; border:1px solid #2A5298; border-radius:8px; color:#7AABF0; font-size:13px; cursor:pointer; }
+  .btnSubmit { flex:1; padding:10px; background:#1A73E8; border:none; border-radius:8px; color:#fff; font-size:13px; cursor:pointer; }
+
+  .noData { text-align:center; padding:40px; color:#7AABF0; font-size:14px; }
+  .loading { text-align:center; padding:30px; color:#4A9EFF; font-size:13px; }
+  .truncate { max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .section { display:none; }
+  .section.active { display:block; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage">
+  <div class="loginBox">
+    <h1>OFFLINK</h1>
+    <p>Admin Dashboard</p>
+    <div class="formGroup">
+      <label>USERNAME</label>
+      <input type="text" id="loginUser" placeholder="Username admin">
+    </div>
+    <div class="formGroup">
+      <label>PASSWORD</label>
+      <input type="password" id="loginPass" placeholder="Password admin" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btnPrimary" onclick="doLogin()">MASUK</button>
+    <div class="loginError" id="loginError">Username atau password salah</div>
+  </div>
+</div>
+
+<!-- MAIN PAGE -->
+<div id="mainPage">
+  <div class="sidebar">
+    <div class="sidebarTitle">OFFLINK<span>Admin Panel</span></div>
+    <div style="margin-top:16px;">
+      <div class="navItem active" onclick="showSection('overview')"><span class="navIcon">📊</span> Overview</div>
+      <div class="navItem" onclick="showSection('transactions')"><span class="navIcon">💳</span> Transaksi</div>
+      <div class="navItem" onclick="showSection('devices')"><span class="navIcon">📱</span> Perangkat</div>
+      <div class="navItem" onclick="showSection('disputes')"><span class="navIcon">🚨</span> Laporan <span id="disputeBadge" style="background:#f87171;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;display:none;"></span></div>
+      <div class="navItem" onclick="showSection('fees')"><span class="navIcon">💰</span> Fee Top Up</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="sidebarFooter">
+      <button class="btnLogout" onclick="doLogout()">Keluar</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="section active" id="sec-overview">
+      <div class="pageTitle">Overview</div>
+      <div class="pageSubtitle">Ringkasan aktivitas OFFLINK</div>
+      <div class="statsGrid">
+        <div class="statCard"><div class="statLabel">TOTAL TRANSAKSI</div><div class="statValue" id="st-tx">—</div></div>
+        <div class="statCard"><div class="statLabel">TOTAL PERANGKAT</div><div class="statValue" id="st-dev">—</div></div>
+        <div class="statCard"><div class="statLabel">PERANGKAT TERKUNCI</div><div class="statValue" id="st-locked" style="color:#f87171">—</div></div>
+        <div class="statCard"><div class="statLabel">LAPORAN PENDING</div><div class="statValue" id="st-disp" style="color:#fbbf24">—</div></div>
+        <div class="statCard"><div class="statLabel">TOTAL FEE TERKUMPUL</div><div class="statValue" id="st-fee">—</div><div class="statSub" id="st-fee-today"></div></div>
+        <div class="statCard"><div class="statLabel">SERVER</div><div class="statValue" style="color:#4ade80;font-size:18px">● ONLINE</div><div class="statSub" id="st-time"></div></div>
+      </div>
+      <button class="btnPrimary" style="width:auto;padding:10px 24px;" onclick="loadStats()">🔄 Refresh</button>
+    </div>
+
+    <!-- TRANSAKSI -->
+    <div class="section" id="sec-transactions">
+      <div class="pageTitle">Transaksi</div>
+      <div class="pageSubtitle">100 transaksi terakhir yang tersync ke server</div>
+      <div class="tableWrap">
+        <div class="tableHeader"><h3>Daftar Transaksi</h3><button class="btnRefresh" onclick="loadTransactions()">🔄 Refresh</button></div>
+        <div id="txTable"><div class="loading">Memuat data...</div></div>
+      </div>
+    </div>
+
+    <!-- PERANGKAT -->
+    <div class="section" id="sec-devices">
+      <div class="pageTitle">Perangkat</div>
+      <div class="pageSubtitle">Semua perangkat terdaftar — kunci/buka akses</div>
+      <div class="tableWrap">
+        <div class="tableHeader"><h3>Daftar Perangkat</h3><button class="btnRefresh" onclick="loadDevices()">🔄 Refresh</button></div>
+        <div id="devTable"><div class="loading">Memuat data...</div></div>
+      </div>
+    </div>
+
+    <!-- DISPUTES -->
+    <div class="section" id="sec-disputes">
+      <div class="pageTitle">Laporan Masalah</div>
+      <div class="pageSubtitle">Kelola refund dan dana tertahan dari user</div>
+      <div class="tableWrap">
+        <div class="tableHeader"><h3>Semua Laporan</h3><button class="btnRefresh" onclick="loadDisputes()">🔄 Refresh</button></div>
+        <div id="dispTable"><div class="loading">Memuat data...</div></div>
+      </div>
+    </div>
+
+    <!-- FEES -->
+    <div class="section" id="sec-fees">
+      <div class="pageTitle">Fee Top Up</div>
+      <div class="pageSubtitle">Rekap pendapatan fee dari setiap top up</div>
+      <div id="feeSummary" style="margin-bottom:20px;"></div>
+      <div class="tableWrap">
+        <div class="tableHeader"><h3>Riwayat Fee</h3><button class="btnRefresh" onclick="loadFees()">🔄 Refresh</button></div>
+        <div id="feeTable"><div class="loading">Memuat data...</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL KUNCI PERANGKAT -->
+<div class="modal" id="modalLock">
+  <div class="modalBox">
+    <h3>🔒 Kunci Perangkat</h3>
+    <input type="hidden" id="lockDeviceId">
+    <div class="formGroup">
+      <label>Alasan penguncian:</label>
+      <textarea id="lockReason" placeholder="Contoh: Terindikasi fraud, sedang investigasi..."></textarea>
+    </div>
+    <div class="modalActions">
+      <button class="btnCancel" onclick="closeModal('modalLock')">Batal</button>
+      <button class="btnSubmit" style="background:#dc2626;" onclick="confirmLock()">Kunci</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SELESAIKAN DISPUTE -->
+<div class="modal" id="modalDispute">
+  <div class="modalBox">
+    <h3>✅ Selesaikan Laporan</h3>
+    <input type="hidden" id="resolveDisputeId">
+    <div class="formGroup">
+      <label>Keputusan:</label>
+      <select id="resolveStatus">
+        <option value="resolved_refund">Dana dikembalikan ke pengirim</option>
+        <option value="resolved_hangus">Dana hangus (penerima sudah terima)</option>
+        <option value="rejected">Laporan ditolak (tidak valid)</option>
+      </select>
+    </div>
+    <div class="formGroup">
+      <label>Catatan admin:</label>
+      <textarea id="resolveNote" placeholder="Jelaskan alasan keputusan..."></textarea>
+    </div>
+    <div class="modalActions">
+      <button class="btnCancel" onclick="closeModal('modalDispute')">Batal</button>
+      <button class="btnSubmit" onclick="confirmResolve()">Simpan Keputusan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+let token = localStorage.getItem('offlink_admin_token') || '';
+
+// ─── AUTH ───
+async function doLogin() {
+  const u = document.getElementById('loginUser').value;
+  const p = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginError');
+  err.style.display = 'none';
+  try {
+    const r = await fetch(`${API}/admin/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username:u, password:p})
+    });
+    const d = await r.json();
+    if (d.token) {
+      token = d.token;
+      localStorage.setItem('offlink_admin_token', token);
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('mainPage').style.display = 'flex';
+      loadStats();
+    } else {
+      err.style.display = 'block';
+    }
+  } catch(e) { err.textContent = 'Gagal terhubung ke server'; err.style.display='block'; }
+}
+
+function doLogout() {
+  localStorage.removeItem('offlink_admin_token');
+  token = '';
+  document.getElementById('mainPage').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+}
+
+function authHeader() {
+  return { 'Content-Type':'application/json', 'Authorization':'Bearer '+token };
+}
+
+// ─── NAVIGATION ───
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.navItem').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if(name==='transactions') loadTransactions();
+  if(name==='devices') loadDevices();
+  if(name==='disputes') loadDisputes();
+  if(name==='fees') loadFees();
+}
+
+// ─── FORMAT ───
+function fmtRp(n) { return 'Rp '+parseInt(n).toLocaleString('id-ID'); }
+function fmtDate(s) { return new Date(s).toLocaleString('id-ID'); }
+function shortId(s) { return s ? s.substring(0,20)+'...' : '-'; }
+
+// ─── STATS ───
+async function loadStats() {
+  try {
+    const r = await fetch(`${API}/admin/stats`, {headers: authHeader()});
+    const d = await r.json();
+    document.getElementById('st-tx').textContent     = d.totalTransactions;
+    document.getElementById('st-dev').textContent    = d.totalDevices;
+    document.getElementById('st-locked').textContent = d.lockedDevices;
+    document.getElementById('st-disp').textContent   = d.pendingDisputes;
+    document.getElementById('st-fee').textContent    = fmtRp(d.totalFee);
+    document.getElementById('st-fee-today').textContent = 'Hari ini: '+fmtRp(d.todayFee);
+    document.getElementById('st-time').textContent = new Date().toLocaleString('id-ID');
+    if (d.pendingDisputes > 0) {
+      document.getElementById('disputeBadge').textContent = d.pendingDisputes;
+      document.getElementById('disputeBadge').style.display = 'inline';
+    }
+  } catch(e) { console.error(e); }
+}
+
+// ─── TRANSACTIONS ───
+async function loadTransactions() {
+  document.getElementById('txTable').innerHTML = '<div class="loading">Memuat...</div>';
+  try {
+    const r = await fetch(`${API}/admin/transactions`, {headers: authHeader()});
+    const d = await r.json();
+    if (!d.transactions || d.transactions.length === 0) {
+      document.getElementById('txTable').innerHTML = '<div class="noData">Belum ada transaksi tersync</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>TX ID</th><th>Pengirim</th><th>Penerima</th><th>Nominal</th><th>Waktu</th></tr></thead><tbody>';
+    d.transactions.forEach(t => {
+      html += `<tr>
+        <td><span class="truncate" title="${t.tx_id}">${t.tx_id.substring(0,18)}...</span></td>
+        <td><span class="truncate" title="${t.sender_id}">${t.sender_id.substring(0,16)}...</span></td>
+        <td><span class="truncate" title="${t.receiver_id}">${t.receiver_id.substring(0,16)}...</span></td>
+        <td>${fmtRp(t.amount)}</td>
+        <td>${fmtDate(t.created_at)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('txTable').innerHTML = html;
+  } catch(e) { document.getElementById('txTable').innerHTML = '<div class="noData">Gagal memuat data</div>'; }
+}
+
+// ─── DEVICES ───
+async function loadDevices() {
+  document.getElementById('devTable').innerHTML = '<div class="loading">Memuat...</div>';
+  try {
+    const r = await fetch(`${API}/admin/devices`, {headers: authHeader()});
+    const d = await r.json();
+    if (!d.devices || d.devices.length === 0) {
+      document.getElementById('devTable').innerHTML = '<div class="noData">Belum ada perangkat terdaftar</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>Device ID</th><th>Tx Count</th><th>Status</th><th>Alasan</th><th>Terdaftar</th><th>Aksi</th></tr></thead><tbody>';
+    d.devices.forEach(dev => {
+      html += `<tr>
+        <td><span class="truncate" title="${dev.device_id}">${dev.device_id.substring(0,20)}...</span></td>
+        <td style="text-align:center">${dev.tx_count}</td>
+        <td><span class="badge ${dev.status}">${dev.status}</span></td>
+        <td style="color:#7AABF0;font-size:12px">${dev.reason||'-'}</td>
+        <td>${fmtDate(dev.created_at)}</td>
+        <td>
+          ${dev.status==='locked'
+            ? `<button class="btnSm btnUnlock" onclick="unlockDevice('${dev.device_id}')">Buka</button>`
+            : `<button class="btnSm btnLock" onclick="openLock('${dev.device_id}')">Kunci</button>`
+          }
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('devTable').innerHTML = html;
+  } catch(e) { document.getElementById('devTable').innerHTML = '<div class="noData">Gagal memuat data</div>'; }
+}
+
+function openLock(deviceId) {
+  document.getElementById('lockDeviceId').value = deviceId;
+  document.getElementById('lockReason').value = '';
+  document.getElementById('modalLock').classList.add('show');
+}
+
+async function confirmLock() {
+  const deviceId = document.getElementById('lockDeviceId').value;
+  const reason   = document.getElementById('lockReason').value;
+  try {
+    await fetch(`${API}/admin/device/lock`, {
+      method:'POST', headers: authHeader(),
+      body: JSON.stringify({deviceId, reason})
+    });
+    closeModal('modalLock');
+    loadDevices();
+  } catch(e) { alert('Gagal mengunci perangkat'); }
+}
+
+async function unlockDevice(deviceId) {
+  if (!confirm('Yakin buka kunci perangkat ini?')) return;
+  try {
+    await fetch(`${API}/admin/device/unlock`, {
+      method:'POST', headers: authHeader(),
+      body: JSON.stringify({deviceId})
+    });
+    loadDevices();
+  } catch(e) { alert('Gagal membuka kunci'); }
+}
+
+// ─── DISPUTES ───
+async function loadDisputes() {
+  document.getElementById('dispTable').innerHTML = '<div class="loading">Memuat...</div>';
+  try {
+    const r = await fetch(`${API}/admin/disputes`, {headers: authHeader()});
+    const d = await r.json();
+    if (!d.disputes || d.disputes.length === 0) {
+      document.getElementById('dispTable').innerHTML = '<div class="noData">Belum ada laporan masuk</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>Pelapor</th><th>TX ID</th><th>Masalah</th><th>Deskripsi</th><th>Status</th><th>Catatan Admin</th><th>Waktu</th><th>Aksi</th></tr></thead><tbody>';
+    d.disputes.forEach(dp => {
+      html += `<tr>
+        <td><span class="truncate" title="${dp.reporter_id}">${dp.reporter_id.substring(0,16)}...</span></td>
+        <td><span class="truncate" title="${dp.tx_id}">${dp.tx_id.substring(0,16)}...</span></td>
+        <td style="font-size:12px">${dp.issue_type}</td>
+        <td style="color:#7AABF0;font-size:12px">${dp.description||'-'}</td>
+        <td><span class="badge ${dp.status}">${dp.status}</span></td>
+        <td style="color:#7AABF0;font-size:12px">${dp.admin_note||'-'}</td>
+        <td>${fmtDate(dp.created_at)}</td>
+        <td>${dp.status==='pending'
+          ? `<button class="btnSm btnResolve" onclick="openResolve(${dp.id})">Selesaikan</button>`
+          : '—'
+        }</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('dispTable').innerHTML = html;
+  } catch(e) { document.getElementById('dispTable').innerHTML = '<div class="noData">Gagal memuat data</div>'; }
+}
+
+function openResolve(id) {
+  document.getElementById('resolveDisputeId').value = id;
+  document.getElementById('resolveNote').value = '';
+  document.getElementById('modalDispute').classList.add('show');
+}
+
+async function confirmResolve() {
+  const id     = document.getElementById('resolveDisputeId').value;
+  const status = document.getElementById('resolveStatus').value;
+  const note   = document.getElementById('resolveNote').value;
+  try {
+    await fetch(`${API}/admin/dispute/${id}/resolve`, {
+      method:'PUT', headers: authHeader(),
+      body: JSON.stringify({status, adminNote: note})
+    });
+    closeModal('modalDispute');
+    loadDisputes();
+    loadStats();
+  } catch(e) { alert('Gagal menyimpan keputusan'); }
+}
+
+// ─── FEES ───
+async function loadFees() {
+  document.getElementById('feeTable').innerHTML = '<div class="loading">Memuat...</div>';
+  try {
+    const r = await fetch(`${API}/admin/fees`, {headers: authHeader()});
+    const d = await r.json();
+    document.getElementById('feeSummary').innerHTML =
+      `<div class="statCard" style="display:inline-block;min-width:200px;">
+        <div class="statLabel">TOTAL FEE TERKUMPUL</div>
+        <div class="statValue">${fmtRp(d.totalFee)}</div>
+      </div>`;
+    if (!d.fees || d.fees.length === 0) {
+      document.getElementById('feeTable').innerHTML = '<div class="noData">Belum ada data fee</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>Device ID</th><th>Top Up</th><th>Fee</th><th>Waktu</th></tr></thead><tbody>';
+    d.fees.forEach(f => {
+      html += `<tr>
+        <td><span class="truncate" title="${f.device_id}">${f.device_id.substring(0,20)}...</span></td>
+        <td>${fmtRp(f.top_up_amount)}</td>
+        <td style="color:#4ade80">${fmtRp(f.fee_amount)}</td>
+        <td>${fmtDate(f.created_at)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('feeTable').innerHTML = html;
+  } catch(e) { document.getElementById('feeTable').innerHTML = '<div class="noData">Gagal memuat data</div>'; }
+}
+
+// ─── MODAL ───
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+window.onclick = (e) => {
+  if(e.target.classList.contains('modal')) e.target.classList.remove('show');
+};
+
+// ─── INIT ───
+if (token) {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('mainPage').style.display = 'flex';
+  loadStats();
+}
+</script>
+</body>
+</html>

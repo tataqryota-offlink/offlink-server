@@ -613,8 +613,8 @@ function renderRecentTx(txs) {
       <td><code style="font-size:11px;color:var(--accent)">${tx.tx_id.substring(0,16)}...</code></td>
       <td><code style="font-size:11px">${tx.sender_id.substring(0,16)}...</code></td>
       <td><code style="font-size:11px">${tx.receiver_id.substring(0,16)}...</code></td>
-      <td style="color:var(--green);font-weight:600">Rp ${parseInt(tx.amount).toLocaleString('id')}</td>
-      <td style="color:var(--text2);font-size:12px">${new Date(tx.created_at).toLocaleString('id')}</td>
+      <td style="color:var(--green);font-weight:600">Rp ${parseInt(tx.amount).toLocaleString('id', { timeZone: 'Asia/Jakarta' })}</td>
+      <td style="color:var(--text2);font-size:12px">${new Date(tx.created_at).toLocaleString('id', { timeZone: 'Asia/Jakarta' })}</td>
       <td><span class="badge badge-green">${tx.status}</span></td>
     </tr>`).join('')}
     </tbody></table>`;
@@ -680,7 +680,7 @@ function showUserDetail(device_id) {
     ['Device ID', u.device_id],
     ['Status', u.blocked ? '🔴 Diblokir' : '🟢 Aktif'],
     ['Total Transaksi', u.tx_count],
-    ['Terdaftar', new Date(u.created_at).toLocaleString('id')],
+    ['Terdaftar', new Date(u.created_at).toLocaleString('id', { timeZone: 'Asia/Jakarta' })],
   ].map(([l,v]) => `<div class="detail-row"><span class="detail-label">${l}</span><span class="detail-value">${v}</span></div>`).join('');
   document.getElementById('modal-overlay').classList.add('open');
 }
@@ -709,9 +709,9 @@ function renderTransactionsTable(txs) {
       <td><code style="font-size:11px;color:var(--accent)">${tx.tx_id.substring(0,16)}...</code></td>
       <td><code style="font-size:11px">${tx.sender_id.substring(0,14)}...</code></td>
       <td><code style="font-size:11px">${tx.receiver_id.substring(0,14)}...</code></td>
-      <td style="color:var(--green);font-weight:600">Rp ${parseInt(tx.amount).toLocaleString('id')}</td>
+      <td style="color:var(--green);font-weight:600">Rp ${parseInt(tx.amount).}</td>
       <td style="color:var(--text2)">${tx.nonce}</td>
-      <td style="font-size:12px;color:var(--text2)">${new Date(tx.created_at).toLocaleString('id')}</td>
+      <td style="font-size:12px;color:var(--text2)">${new Date(tx.created_at).toLocaleString('id', { timeZone: 'Asia/Jakarta' })}</td>
       <td><span class="badge badge-green">${tx.status}</span></td>
     </tr>`).join('')}
     </tbody></table>`;
@@ -742,7 +742,7 @@ function showTxDetail(tx) {
     ['Nonce', tx.nonce],
     ['Hash', tx.hash?.substring(0,32)+'...'],
     ['Status', tx.status],
-    ['Waktu', new Date(tx.created_at).toLocaleString('id')],
+    ['Waktu', new Date(tx.created_at).toLocaleString('id', { timeZone: 'Asia/Jakarta' })],
   ].map(([l,v]) => `<div class="detail-row"><span class="detail-label">${l}</span><span class="detail-value">${v||'-'}</span></div>`).join('');
   document.getElementById('modal-overlay').classList.add('open');
 }
@@ -812,8 +812,8 @@ function detectAnomalies(txs) {
 // ─── LOGS ───
 function loadLogs() {
   const logData = [
-    {time: new Date().toLocaleString('id'), type: 'INFO', msg: 'Dashboard dimuat oleh admin'},
-    {time: new Date(Date.now()-60000).toLocaleString('id'), type: 'INFO', msg: 'Server online'},
+    {time: new Date().toLocaleString('id', { timeZone: 'Asia/Jakarta' }), type: 'INFO', msg: 'Dashboard dimuat oleh admin'},
+    {time: new Date(Date.now()-60000).toLocaleString('id', { timeZone: 'Asia/Jakarta' }), type: 'INFO', msg: 'Server online'},
   ];
   document.getElementById('logs-list').innerHTML = `
     <table><thead><tr><th>Waktu</th><th>Tipe</th><th>Pesan</th></tr></thead><tbody>
