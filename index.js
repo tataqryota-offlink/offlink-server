@@ -10,6 +10,8 @@ const helmet   = require('helmet');
 const path     = require('path');
 const { Pool } = require('pg');
 const rateLimit = require('express-rate-limit');
+const bcrypt = require('bcrypt');
+const ed = require('@noble/ed25519');
 
 const app  = express();
 const port = process.env.PORT || 3000;
@@ -17,8 +19,31 @@ const port = process.env.PORT || 3000;
 // ─────────────────────────────────────────────
 // MIDDLEWARE
 // ─────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+    },
+  },
+}));
+app.use(cors({
+  origin: function (origin, callback) {
+    const allowed = [
+      process.env.CORS_ORIGIN || 'https://offlink-server-production.up.railway.app',
+    ];
+    // Izinkan request tanpa origin (mobile app, Postman)
+    if (!origin || allowed.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS tidak diizinkan'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));          
 app.use(express.json());
 
 // ─────────────────────────────────────────────
@@ -70,7 +95,9 @@ function adminAuth(req, res, next) {
 // ─────────────────────────────────────────────
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: true }
+    : false,
 });
 
 // ─────────────────────────────────────────────
@@ -171,7 +198,7 @@ app.post('/device/register', registerLimiter, async (req, res) => {
     await pool.query(
       `INSERT INTO devices (device_id, public_key)
        VALUES ($1, $2)
-       ON CONFLICT (device_id) DO UPDATE SET public_key = $2`,
+       ON CONFLICT (device_id) DO NOTHING`,
       [deviceId, publicKey]
     );
     res.json({ success: true, message: 'Perangkat terdaftar' });
@@ -230,11 +257,31 @@ app.post('/tx/check', txLimiter, async (req, res) => {
 });
 
 // 4. Simpan transaksi
-app.post('/tx/sync', async (req, res) => {
+app.post('/tx/sync', txLimiter, async (req, res) => {
   const { txId, senderId, receiverId, amount, nonce, hash } = req.body;
   if (!txId || !senderId || !receiverId || !amount || !nonce || !hash)
     return res.status(400).json({ error: 'Semua field wajib diisi' });
+
+  // Validasi input
+  if (typeof amount !== 'number' || amount <= 0)
+    return res.status(400).json({ error: 'Amount tidak valid' });
+  if (typeof nonce !== 'number' || nonce <= 0)
+    return res.status(400).json({ error: 'Nonce tidak valid' });
+  if (txId.length > 100)
+    return res.status(400).json({ error: 'txId tidak valid' });
+  if (senderId.length > 200 || receiverId.length > 200)
+    return res.status(400).json({ error: 'ID perangkat tidak valid' });
+
   try {
+    // Cek pengirim terdaftar di database
+    const deviceResult = await pool.query(
+      'SELECT public_key FROM devices WHERE device_id = $1',
+      [senderId]
+    );
+    if (deviceResult.rows.length === 0)
+      return res.status(403).json({ error: 'Perangkat pengirim tidak terdaftar' });
+
+    // Simpan transaksi
     await pool.query(
       `INSERT INTO transactions (tx_id, sender_id, receiver_id, amount, nonce, hash)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -316,13 +363,23 @@ app.post('/topup/fee', async (req, res) => {
 // ─────────────────────────────────────────────
 
 // Login admin
-app.post('/admin/login', (req, res) => {
+app.post('/admin/login', async (req, res) => {
   const { username, password } = req.body;
-  if (
-    username === process.env.ADMIN_USERNAME &&
-    password === process.env.ADMIN_PASSWORD
-  ) {
-    const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '8h' });
+  if (!username || !password)
+    return res.status(400).json({ error: 'Username dan password wajib diisi' });
+
+  const validUsername = username === process.env.ADMIN_USERNAME;
+  const validPassword = await bcrypt.compare(
+    password,
+    process.env.ADMIN_PASSWORD_HASH
+  );
+
+  if (validUsername && validPassword) {
+    const token = jwt.sign(
+      { role: 'admin' },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
     return res.json({ success: true, token });
   }
   return res.status(401).json({ error: 'Username atau password salah' });
