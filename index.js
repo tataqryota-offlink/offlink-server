@@ -646,6 +646,188 @@ app.post('/admin/users/unblock', adminAuth, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// ADMIN — KYC & PENGGUNA
+// ─────────────────────────────────────────────
+app.get('/admin/api/users/detail/:deviceId', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT d.device_id, d.public_key, d.balance, d.held_balance, d.created_at,
+              u.full_name, u.phone, u.nik_hash, u.kyc_status, u.kyc_verified_at
+       FROM devices d LEFT JOIN users u ON d.device_id = u.device_id
+       WHERE d.device_id = $1`,
+      [req.params.deviceId]
+    );
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: 'Device tidak ditemukan' });
+    res.json(result.rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/admin/api/users/kyc/approve', verifyAdmin, async (req, res) => {
+  const { deviceId } = req.body;
+  if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
+  try {
+    await pool.query(
+      `INSERT INTO users (device_id, kyc_status, kyc_verified_at)
+       VALUES ($1, 'verified', NOW())
+       ON CONFLICT (device_id) DO UPDATE SET kyc_status = 'verified', kyc_verified_at = NOW()`,
+      [deviceId]
+    );
+    await pool.query(
+      `INSERT INTO audit_logs (admin_user, action, target, ip_address)
+       VALUES ($1, 'KYC_APPROVE', $2, $3)`,
+      ['admin', deviceId, req.ip]
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/admin/api/users/kyc/reject', verifyAdmin, async (req, res) => {
+  const { deviceId, reason } = req.body;
+  if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
+  try {
+    await pool.query(
+      `INSERT INTO users (device_id, kyc_status)
+       VALUES ($1, 'rejected')
+       ON CONFLICT (device_id) DO UPDATE SET kyc_status = 'rejected'`,
+      [deviceId]
+    );
+    await pool.query(
+      `INSERT INTO audit_logs (admin_user, action, target, detail, ip_address)
+       VALUES ($1, 'KYC_REJECT', $2, $3, $4)`,
+      ['admin', deviceId, JSON.stringify({ reason }), req.ip]
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────────
+// ADMIN — AML & ANOMALI
+// ─────────────────────────────────────────────
+app.get('/admin/api/aml/alerts', verifyAdmin, async (req, res) => {
+  try {
+    const { status, risk_level } = req.query;
+    let query = 'SELECT * FROM aml_alerts WHERE 1=1';
+    const params = [];
+    if (status) { params.push(status); query += ` AND status = $${params.length}`; }
+    if (risk_level) { params.push(risk_level); query += ` AND risk_level = $${params.length}`; }
+    query += ' ORDER BY created_at DESC LIMIT 100';
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/admin/api/aml/stats', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'open') AS open_alerts,
+        COUNT(*) FILTER (WHERE risk_level = 'high') AS high_risk,
+        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day') AS today
+      FROM aml_alerts
+    `);
+    res.json(result.rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/admin/api/aml/handle', verifyAdmin, async (req, res) => {
+  const { alertId, action } = req.body;
+  if (!alertId || !action) return res.status(400).json({ error: 'alertId dan action wajib diisi' });
+  try {
+    await pool.query(
+      `UPDATE aml_alerts SET status = $1, handled_by = 'admin', handled_at = NOW() WHERE id = $2`,
+      [action, alertId]
+    );
+    await pool.query(
+      `INSERT INTO audit_logs (admin_user, action, target, ip_address)
+       VALUES ('admin', $1, $2, $3)`,
+      [`AML_${action.toUpperCase()}`, String(alertId), req.ip]
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────────
+// ADMIN — AUDIT LOG
+// ─────────────────────────────────────────────
+app.get('/admin/api/audit-logs', verifyAdmin, async (req, res) => {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+    const result = await pool.query(
+      'SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    );
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────────
+// ADMIN — SYSTEM HEALTH
+// ─────────────────────────────────────────────
+app.get('/admin/api/health', verifyAdmin, async (req, res) => {
+  try {
+    const dbStart = Date.now();
+    await pool.query('SELECT 1');
+    const dbLatency = Date.now() - dbStart;
+    res.json({
+      server: 'online',
+      database: 'connected',
+      db_latency_ms: dbLatency,
+      uptime_seconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString()
+    });
+  } catch (e) {
+    res.json({ server: 'online', database: 'error', error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// ADMIN — REKONSILIASI
+// ─────────────────────────────────────────────
+app.get('/admin/api/reconciliation/summary', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        COUNT(*) AS total_tx,
+        COALESCE(SUM(amount), 0) AS total_volume,
+        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day') AS today_tx,
+        COALESCE(SUM(amount) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day'), 0) AS today_volume
+      FROM transactions
+    `);
+    res.json(result.rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────────
+// ADMIN — KONFIGURASI SISTEM
+// ─────────────────────────────────────────────
+app.get('/admin/api/config', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM system_config ORDER BY key');
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/admin/api/config', verifyAdmin, async (req, res) => {
+  const { key, value } = req.body;
+  if (!key || !value) return res.status(400).json({ error: 'key dan value wajib diisi' });
+  try {
+    await pool.query(
+      `INSERT INTO system_config (key, value, updated_by, updated_at)
+       VALUES ($1, $2, 'admin', NOW())
+       ON CONFLICT (key) DO UPDATE SET value = $2, updated_by = 'admin', updated_at = NOW()`,
+      [key, value]
+    );
+    await pool.query(
+      `INSERT INTO audit_logs (admin_user, action, target, detail, ip_address)
+       VALUES ('admin', 'CONFIG_UPDATE', $1, $2, $3)`,
+      [key, JSON.stringify({ value }), req.ip]
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────────
 // START SERVER
 // ─────────────────────────────────────────────
 initDB().then(() => {
