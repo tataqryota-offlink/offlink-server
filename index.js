@@ -109,6 +109,8 @@ async function initDB() {
       id           SERIAL PRIMARY KEY,
       device_id    TEXT UNIQUE NOT NULL,
       public_key   TEXT NOT NULL,
+      balance      BIGINT DEFAULT 0,
+      held_balance BIGINT DEFAULT 0,
       created_at   TIMESTAMP DEFAULT NOW()
     );
 
@@ -256,6 +258,47 @@ app.post('/tx/check', txLimiter, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────
+// 3b. Update saldo device
+// ─────────────────────────────────────────────
+app.post('/device/balance', async (req, res) => {
+  const { deviceId, balance, heldBalance } = req.body;
+  if (!deviceId || balance === undefined)
+    return res.status(400).json({ error: 'deviceId dan balance wajib diisi' });
+  if (typeof balance !== 'number' || balance < 0)
+    return res.status(400).json({ error: 'Balance tidak valid' });
+  try {
+    await pool.query(
+      `UPDATE devices SET balance = $1, held_balance = $2 WHERE device_id = $3`,
+      [balance, heldBalance ?? 0, deviceId]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// 3c. Ambil saldo device
+// ─────────────────────────────────────────────
+app.get('/device/balance/:deviceId', async (req, res) => {
+  const { deviceId } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT balance, held_balance FROM devices WHERE device_id = $1',
+      [deviceId]
+    );
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: 'Device tidak ditemukan' });
+    res.json({
+      balance: result.rows[0].balance,
+      heldBalance: result.rows[0].held_balance
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // 4. Simpan transaksi
 app.post('/tx/sync', txLimiter, async (req, res) => {
   const { txId, senderId, receiverId, amount, nonce, hash } = req.body;
@@ -273,13 +316,43 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
     return res.status(400).json({ error: 'ID perangkat tidak valid' });
 
   try {
-    // Cek pengirim terdaftar di database
+    // Cek pengirim terdaftar dan ambil saldo
     const deviceResult = await pool.query(
-      'SELECT public_key FROM devices WHERE device_id = $1',
+      'SELECT public_key, balance FROM devices WHERE device_id = $1',
       [senderId]
     );
     if (deviceResult.rows.length === 0)
       return res.status(403).json({ error: 'Perangkat pengirim tidak terdaftar' });
+
+    // Cek saldo mencukupi
+    if (deviceResult.rows[0].balance < amount)
+      return res.status(400).json({ error: 'Saldo tidak mencukupi' });
+
+    // Cek device tidak diblokir
+    const statusResult = await pool.query(
+      'SELECT status FROM device_status WHERE device_id = $1',
+      [senderId]
+    );
+    if (statusResult.rows.length > 0 && statusResult.rows[0].status === 'blocked')
+      return res.status(403).json({ error: 'Perangkat diblokir oleh administrator' });
+
+    // Cek txId belum pernah dipakai
+    const usedResult = await pool.query(
+      'SELECT tx_id FROM used_tx_ids WHERE tx_id = $1',
+      [txId]
+    );
+    if (usedResult.rows.length > 0)
+      return res.status(409).json({ error: 'Transaksi sudah pernah diproses' });
+
+    // Kurangi saldo pengirim, tambah saldo penerima
+    await pool.query(
+      'UPDATE devices SET balance = balance - $1, held_balance = held_balance + $1 WHERE device_id = $2',
+      [amount, senderId]
+    );
+    await pool.query(
+      'UPDATE devices SET balance = balance + $1 WHERE device_id = $2',
+      [amount, receiverId]
+    );
 
     // Simpan transaksi
     await pool.query(
@@ -287,6 +360,11 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (tx_id) DO NOTHING`,
       [txId, senderId, receiverId, amount, nonce, hash]
+    );
+    // Tandai txId sudah dipakai
+    await pool.query(
+      'INSERT INTO used_tx_ids (tx_id) VALUES ($1) ON CONFLICT DO NOTHING',
+      [txId]
     );
     res.json({ success: true, message: 'Transaksi tersimpan' });
   } catch (e) {
