@@ -77,7 +77,7 @@ const nonceLimiter = rateLimit({
 // ─────────────────────────────────────────────
 // ADMIN AUTH MIDDLEWARE
 // ─────────────────────────────────────────────
-function adminAuth(req, res, next) {
+function verifyAdmin(req, res, next) {
   const auth = req.headers['authorization'];
   if (!auth) return res.status(401).json({ error: 'Token tidak ada' });
   const token = auth.replace('Bearer ', '');
@@ -504,7 +504,7 @@ app.post('/admin/login', async (req, res) => {
 });
 
 // Statistik ringkasan
-app.get('/admin/stats', adminAuth, async (req, res) => {
+app.get('/admin/stats', verifyAdmin, async (req, res) => {
   try {
     const txCount     = await pool.query('SELECT COUNT(*) FROM transactions');
     const devCount    = await pool.query('SELECT COUNT(*) FROM devices');
@@ -526,7 +526,7 @@ app.get('/admin/stats', adminAuth, async (req, res) => {
 });
 
 // Semua transaksi
-app.get('/admin/transactions', adminAuth, async (req, res) => {
+app.get('/admin/transactions', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM transactions ORDER BY created_at DESC LIMIT 100'
@@ -536,7 +536,7 @@ app.get('/admin/transactions', adminAuth, async (req, res) => {
 });
 
 // Semua perangkat
-app.get('/admin/devices', adminAuth, async (req, res) => {
+app.get('/admin/devices', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT d.device_id, d.public_key, d.created_at,
@@ -553,7 +553,7 @@ app.get('/admin/devices', adminAuth, async (req, res) => {
 });
 
 // Kunci perangkat
-app.post('/admin/device/lock', adminAuth, async (req, res) => {
+app.post('/admin/device/lock', verifyAdmin, async (req, res) => {
   const { deviceId, reason } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
   try {
@@ -568,7 +568,7 @@ app.post('/admin/device/lock', adminAuth, async (req, res) => {
 });
 
 // Buka kunci perangkat
-app.post('/admin/device/unlock', adminAuth, async (req, res) => {
+app.post('/admin/device/unlock', verifyAdmin, async (req, res) => {
   const { deviceId } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
   try {
@@ -583,7 +583,7 @@ app.post('/admin/device/unlock', adminAuth, async (req, res) => {
 });
 
 // Semua laporan dispute
-app.get('/admin/disputes', adminAuth, async (req, res) => {
+app.get('/admin/disputes', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM disputes ORDER BY created_at DESC'
@@ -593,7 +593,7 @@ app.get('/admin/disputes', adminAuth, async (req, res) => {
 });
 
 // Selesaikan dispute
-app.put('/admin/dispute/:id/resolve', adminAuth, async (req, res) => {
+app.put('/admin/dispute/:id/resolve', verifyAdmin, async (req, res) => {
   const { id } = req.params;
   const { status, adminNote } = req.body;
   if (!status) return res.status(400).json({ error: 'status wajib diisi' });
@@ -607,7 +607,7 @@ app.put('/admin/dispute/:id/resolve', adminAuth, async (req, res) => {
 });
 
 // Semua data fee
-app.get('/admin/fees', adminAuth, async (req, res) => {
+app.get('/admin/fees', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM top_up_fees ORDER BY created_at DESC LIMIT 100'
@@ -620,7 +620,7 @@ app.get('/admin/fees', adminAuth, async (req, res) => {
 });
 
 // Blokir user
-app.post('/admin/users/block', adminAuth, async (req, res) => {
+app.post('/admin/users/block', verifyAdmin, async (req, res) => {
   const { device_id } = req.body;
   if (!device_id) return res.status(400).json({ error: 'device_id wajib diisi' });
   try {
@@ -633,7 +633,7 @@ app.post('/admin/users/block', adminAuth, async (req, res) => {
 });
 
 // Buka blokir user
-app.post('/admin/users/unblock', adminAuth, async (req, res) => {
+app.post('/admin/users/unblock', verifyAdmin, async (req, res) => {
   const { device_id } = req.body;
   if (!device_id) return res.status(400).json({ error: 'device_id wajib diisi' });
   try {
