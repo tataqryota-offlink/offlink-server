@@ -95,8 +95,8 @@ function adminAuth(req, res, next) {
 // ─────────────────────────────────────────────
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: true }
+  ssl: process.env.DATABASE_URL
+    ? { rejectUnauthorized: false }
     : false,
 });
 
