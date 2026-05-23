@@ -118,6 +118,12 @@
       <div class="navItem" onclick="showSection('devices')"><span class="navIcon">📱</span> Perangkat</div>
       <div class="navItem" onclick="showSection('disputes')"><span class="navIcon">🚨</span> Laporan <span id="disputeBadge" style="background:#f87171;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;display:none;"></span></div>
       <div class="navItem" onclick="showSection('fees')"><span class="navIcon">💰</span> Fee Top Up</div>
+      <div class="navItem" onclick="showSection('kyc')"><span class="navIcon">👤</span> KYC & Pengguna</div>
+      <div class="navItem" onclick="showSection('aml')"><span class="navIcon">🚨</span> AML & Anomali</div>
+      <div class="navItem" onclick="showSection('reconciliation')"><span class="navIcon">📋</span> Rekonsiliasi</div>
+      <div class="navItem" onclick="showSection('auditlog')"><span class="navIcon">📝</span> Audit Log</div>
+      <div class="navItem" onclick="showSection('health')"><span class="navIcon">💚</span> System Health</div>
+      <div class="navItem" onclick="showSection('config')"><span class="navIcon">⚙️</span> Pengaturan</div>
     </div>
     <div style="flex:1"></div>
     <div class="sidebarFooter">
@@ -185,6 +191,98 @@
 
   </div>
 </div>
+
+<!-- KYC & PENGGUNA -->
+    <div class="section" id="sec-kyc">
+      <div class="pageTitle">KYC & Pengguna</div>
+      <div class="pageSubtitle">Manajemen identitas dan verifikasi pengguna</div>
+      <div class="statsGrid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="statCard"><div class="statLabel">TOTAL PENGGUNA</div><div class="statValue" id="kyc-total">—</div></div>
+        <div class="statCard"><div class="statLabel">TERVERIFIKASI</div><div class="statValue" id="kyc-verified" style="color:#4ade80">—</div></div>
+        <div class="statCard"><div class="statLabel">BELUM VERIFIKASI</div><div class="statValue" id="kyc-pending" style="color:#fbbf24">—</div></div>
+      </div>
+      <div class="tableWrap">
+        <div class="tableHeader"><h3>Daftar Pengguna</h3><button class="btnRefresh" onclick="loadKyc()">🔄 Refresh</button></div>
+        <div id="kycTable"><div class="loading">Memuat data...</div></div>
+      </div>
+    </div>
+
+    <!-- AML & ANOMALI -->
+    <div class="section" id="sec-aml">
+      <div class="pageTitle">AML & Deteksi Anomali</div>
+      <div class="pageSubtitle">Monitor transaksi mencurigakan</div>
+      <div class="statsGrid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="statCard"><div class="statLabel">ALERT TERBUKA</div><div class="statValue" id="aml-open" style="color:#f87171">—</div></div>
+        <div class="statCard"><div class="statLabel">RISIKO TINGGI</div><div class="statValue" id="aml-high" style="color:#f87171">—</div></div>
+        <div class="statCard"><div class="statLabel">ALERT HARI INI</div><div class="statValue" id="aml-today" style="color:#fbbf24">—</div></div>
+      </div>
+      <div class="tableWrap">
+        <div class="tableHeader"><h3>Daftar Alert</h3><button class="btnRefresh" onclick="loadAml()">🔄 Refresh</button></div>
+        <div id="amlTable"><div class="loading">Memuat data...</div></div>
+      </div>
+    </div>
+
+    <!-- REKONSILIASI -->
+    <div class="section" id="sec-reconciliation">
+      <div class="pageTitle">Rekonsiliasi & Settlement</div>
+      <div class="pageSubtitle">Ringkasan settlement transaksi offline</div>
+      <div class="statsGrid" style="grid-template-columns:repeat(2,1fr)">
+        <div class="statCard"><div class="statLabel">TOTAL TRANSAKSI</div><div class="statValue" id="rec-total">—</div></div>
+        <div class="statCard"><div class="statLabel">TOTAL VOLUME</div><div class="statValue" id="rec-volume">—</div></div>
+        <div class="statCard"><div class="statLabel">TRANSAKSI HARI INI</div><div class="statValue" id="rec-today-tx">—</div></div>
+        <div class="statCard"><div class="statLabel">VOLUME HARI INI</div><div class="statValue" id="rec-today-vol">—</div></div>
+      </div>
+      <div class="tableWrap">
+        <div class="tableHeader"><h3>Detail Rekonsiliasi</h3><button class="btnRefresh" onclick="loadReconciliation()">🔄 Refresh</button></div>
+        <div id="recTable"><div class="loading">Memuat data...</div></div>
+      </div>
+    </div>
+
+    <!-- AUDIT LOG -->
+    <div class="section" id="sec-auditlog">
+      <div class="pageTitle">Audit Log</div>
+      <div class="pageSubtitle">Semua aksi admin tercatat dan tidak bisa dihapus</div>
+      <div class="tableWrap">
+        <div class="tableHeader"><h3>Log Aktivitas Admin</h3><button class="btnRefresh" onclick="loadAuditLog()">🔄 Refresh</button></div>
+        <div id="auditTable"><div class="loading">Memuat data...</div></div>
+      </div>
+    </div>
+
+    <!-- SYSTEM HEALTH -->
+    <div class="section" id="sec-health">
+      <div class="pageTitle">System Health</div>
+      <div class="pageSubtitle">Status server dan database secara real-time</div>
+      <div class="statsGrid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="statCard"><div class="statLabel">STATUS SERVER</div><div class="statValue" id="h-server" style="color:#4ade80">—</div></div>
+        <div class="statCard"><div class="statLabel">STATUS DATABASE</div><div class="statValue" id="h-db" style="color:#4ade80">—</div></div>
+        <div class="statCard"><div class="statLabel">DB LATENCY</div><div class="statValue" id="h-latency">—</div></div>
+        <div class="statCard"><div class="statLabel">UPTIME SERVER</div><div class="statValue" id="h-uptime">—</div></div>
+        <div class="statCard"><div class="statLabel">LAST CHECK</div><div class="statValue" id="h-time" style="font-size:14px">—</div></div>
+      </div>
+      <button class="btnPrimary" style="width:auto;padding:10px 24px;margin-top:8px" onclick="loadHealth()">🔄 Refresh</button>
+    </div>
+
+    <!-- PENGATURAN -->
+    <div class="section" id="sec-config">
+      <div class="pageTitle">Pengaturan Sistem</div>
+      <div class="pageSubtitle">Konfigurasi parameter sistem OFFLINK</div>
+      <div class="tableWrap">
+        <div class="tableHeader"><h3>Konfigurasi</h3><button class="btnRefresh" onclick="loadConfig()">🔄 Refresh</button></div>
+        <div id="configTable"><div class="loading">Memuat data...</div></div>
+      </div>
+      <div style="margin-top:20px;background:#142B4E;border:1px solid #2A5298;border-radius:12px;padding:20px;">
+        <h3 style="font-size:15px;margin-bottom:16px;">Tambah / Update Konfigurasi</h3>
+        <div class="formGroup">
+          <label>Key</label>
+          <input type="text" id="configKey" placeholder="Contoh: max_offline_tx">
+        </div>
+        <div class="formGroup">
+          <label>Value</label>
+          <input type="text" id="configValue" placeholder="Contoh: 10">
+        </div>
+        <button class="btnPrimary" style="width:auto;padding:10px 24px;" onclick="saveConfig()">Simpan</button>
+      </div>
+    </div>
 
 <!-- MODAL KUNCI PERANGKAT -->
 <div class="modal" id="modalLock">
@@ -271,10 +369,16 @@ function showSection(name) {
   document.querySelectorAll('.navItem').forEach(n => n.classList.remove('active'));
   document.getElementById('sec-'+name).classList.add('active');
   event.currentTarget.classList.add('active');
-  if(name==='transactions') loadTransactions();
+if(name==='transactions') loadTransactions();
   if(name==='devices') loadDevices();
   if(name==='disputes') loadDisputes();
   if(name==='fees') loadFees();
+  if(name==='kyc')            loadKyc();
+  if(name==='aml')            loadAml();
+  if(name==='reconciliation') loadReconciliation();
+  if(name==='auditlog')       loadAuditLog();
+  if(name==='health')         loadHealth();
+  if(name==='config')         loadConfig();
 }
 
 // ─── FORMAT ───
@@ -479,6 +583,293 @@ if (token) {
   document.getElementById('loginPage').style.display = 'none';
   document.getElementById('mainPage').style.display = 'flex';
   loadStats();
+}
+
+// ══════════════════════════════════════════
+// HELPER: apiFetch
+// ══════════════════════════════════════════
+async function apiFetch(url, method = 'GET', body = null) {
+  const token = localStorage.getItem('adminToken');
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const r = await fetch(url, opts);
+    return await r.json();
+  } catch (e) {
+    console.error('apiFetch error:', e);
+    return null;
+  }
+}
+
+// ══════════════════════════════════════════
+// KYC & PENGGUNA
+// ══════════════════════════════════════════
+async function loadKyc() {
+  document.getElementById('kycTable').innerHTML = '<div class="loading">Memuat data...</div>';
+  const rows = await apiFetch('/admin/api/users/list');
+  if (!rows) {
+    document.getElementById('kycTable').innerHTML = '<div class="loading">Gagal memuat data</div>';
+    return;
+  }
+  const verified = rows.filter(x => x.kyc_status === 'verified').length;
+  const pending  = rows.filter(x => !x.kyc_status || x.kyc_status === 'unverified').length;
+  document.getElementById('kyc-total').textContent    = rows.length;
+  document.getElementById('kyc-verified').textContent = verified;
+  document.getElementById('kyc-pending').textContent  = pending;
+
+  if (rows.length === 0) {
+    document.getElementById('kycTable').innerHTML = '<div class="loading">Belum ada pengguna terdaftar</div>';
+    return;
+  }
+  document.getElementById('kycTable').innerHTML = `
+    <table class="dataTable">
+      <thead>
+        <tr>
+          <th>Device ID</th>
+          <th>Nama</th>
+          <th>No HP</th>
+          <th>Saldo</th>
+          <th>Status KYC</th>
+          <th>Terdaftar</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(u => `
+          <tr>
+            <td style="font-size:11px">${u.device_id.substring(0,24)}...</td>
+            <td>${u.full_name || '—'}</td>
+            <td>${u.phone || '—'}</td>
+            <td>Rp ${Number(u.balance || 0).toLocaleString('id-ID')}</td>
+            <td>
+              <span style="color:${
+                u.kyc_status === 'verified'  ? '#4ade80' :
+                u.kyc_status === 'rejected'  ? '#f87171' : '#fbbf24'
+              }">
+                ${u.kyc_status === 'verified' ? '✅ Verified' :
+                  u.kyc_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+              </span>
+            </td>
+            <td style="font-size:12px">${new Date(u.created_at).toLocaleDateString('id-ID')}</td>
+            <td>
+              <button onclick="kycAction('${u.device_id}','approve')"
+                style="background:#166534;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:12px">
+                ✅ Approve
+              </button>
+              <button onclick="kycAction('${u.device_id}','reject')"
+                style="background:#7f1d1d;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">
+                ❌ Reject
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function kycAction(deviceId, action) {
+  const url = action === 'approve'
+    ? '/admin/api/users/kyc/approve'
+    : '/admin/api/users/kyc/reject';
+  const result = await apiFetch(url, 'POST', { deviceId });
+  if (result && result.success) {
+    loadKyc();
+  } else {
+    alert('Gagal: ' + (result ? result.error : 'koneksi error'));
+  }
+}
+
+// ══════════════════════════════════════════
+// AML & ANOMALI
+// ══════════════════════════════════════════
+async function loadAml() {
+  document.getElementById('amlTable').innerHTML = '<div class="loading">Memuat data...</div>';
+  const [stats, alerts] = await Promise.all([
+    apiFetch('/admin/api/aml/stats'),
+    apiFetch('/admin/api/aml/alerts')
+  ]);
+  if (stats) {
+    document.getElementById('aml-open').textContent  = stats.open_alerts || 0;
+    document.getElementById('aml-high').textContent  = stats.high_risk   || 0;
+    document.getElementById('aml-today').textContent = stats.today       || 0;
+  }
+  const rows = alerts || [];
+  if (rows.length === 0) {
+    document.getElementById('amlTable').innerHTML = '<div class="loading">Tidak ada alert saat ini</div>';
+    return;
+  }
+  document.getElementById('amlTable').innerHTML = `
+    <table class="dataTable">
+      <thead>
+        <tr><th>ID</th><th>Device</th><th>Tipe Alert</th><th>Risiko</th><th>Status</th><th>Waktu</th><th>Aksi</th></tr>
+      </thead>
+      <tbody>
+        ${rows.map(a => `
+          <tr>
+            <td>${a.id}</td>
+            <td style="font-size:11px">${a.device_id.substring(0,16)}...</td>
+            <td>${a.alert_type}</td>
+            <td><span style="color:${
+              a.risk_level === 'high'   ? '#f87171' :
+              a.risk_level === 'low'    ? '#4ade80' : '#fbbf24'
+            }">${a.risk_level}</span></td>
+            <td>${a.status}</td>
+            <td style="font-size:12px">${new Date(a.created_at).toLocaleString('id-ID')}</td>
+            <td>
+              <button onclick="amlHandle(${a.id},'resolved')"
+                style="background:#166534;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:12px">
+                ✅ Selesai
+              </button>
+              <button onclick="amlHandle(${a.id},'dismissed')"
+                style="background:#374151;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px">
+                🚫 Abaikan
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function amlHandle(alertId, action) {
+  const result = await apiFetch('/admin/api/aml/handle', 'POST', { alertId, action });
+  if (result && result.success) {
+    loadAml();
+  } else {
+    alert('Gagal: ' + (result ? result.error : 'koneksi error'));
+  }
+}
+
+// ══════════════════════════════════════════
+// REKONSILIASI
+// ══════════════════════════════════════════
+async function loadReconciliation() {
+  document.getElementById('recTable').innerHTML = '<div class="loading">Memuat data...</div>';
+  const s = await apiFetch('/admin/api/reconciliation/summary');
+  if (s) {
+    document.getElementById('rec-total').textContent     = Number(s.total_tx    || 0).toLocaleString('id-ID');
+    document.getElementById('rec-volume').textContent    = 'Rp ' + Number(s.total_volume  || 0).toLocaleString('id-ID');
+    document.getElementById('rec-today-tx').textContent  = Number(s.today_tx   || 0).toLocaleString('id-ID');
+    document.getElementById('rec-today-vol').textContent = 'Rp ' + Number(s.today_volume || 0).toLocaleString('id-ID');
+  }
+  document.getElementById('recTable').innerHTML = `
+    <div style="padding:20px;color:#94a3b8;line-height:1.8;font-size:14px">
+      <p>📌 <strong style="color:#e2e8f0">Cara kerja rekonsiliasi OFFLINK:</strong></p>
+      <p>1. Transaksi terjadi secara offline di antara dua HP tanpa internet.</p>
+      <p>2. Saat HP online, transaksi di-sync ke server melalui endpoint <code>/tx/sync</code>.</p>
+      <p>3. Server memverifikasi: device terdaftar, tidak diblokir, txId belum pernah dipakai, dan saldo mencukupi.</p>
+      <p>4. Jika semua valid, saldo pengirim dikurangi dan saldo penerima ditambah di database.</p>
+      <p>5. Total saldo semua device di server = total dana yang masuk dari top up.</p>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+// AUDIT LOG
+// ══════════════════════════════════════════
+async function loadAuditLog() {
+  document.getElementById('auditTable').innerHTML = '<div class="loading">Memuat data...</div>';
+  const rows = await apiFetch('/admin/api/audit-logs?limit=100');
+  if (!rows || rows.length === 0) {
+    document.getElementById('auditTable').innerHTML = '<div class="loading">Belum ada log aktivitas</div>';
+    return;
+  }
+  document.getElementById('auditTable').innerHTML = `
+    <table class="dataTable">
+      <thead>
+        <tr><th>ID</th><th>Admin</th><th>Aksi</th><th>Target</th><th>IP Address</th><th>Waktu</th></tr>
+      </thead>
+      <tbody>
+        ${rows.map(l => `
+          <tr>
+            <td>${l.id}</td>
+            <td>${l.admin_user}</td>
+            <td>${l.action}</td>
+            <td>${l.target || '—'}</td>
+            <td>${l.ip_address || '—'}</td>
+            <td style="font-size:12px">${new Date(l.created_at).toLocaleString('id-ID')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ══════════════════════════════════════════
+// SYSTEM HEALTH
+// ══════════════════════════════════════════
+async function loadHealth() {
+  document.getElementById('h-server').textContent  = '⏳ Memeriksa...';
+  document.getElementById('h-db').textContent      = '⏳ Memeriksa...';
+  document.getElementById('h-latency').textContent = '—';
+  document.getElementById('h-uptime').textContent  = '—';
+  document.getElementById('h-time').textContent    = '—';
+
+  const h = await apiFetch('/admin/api/health');
+  if (!h) {
+    document.getElementById('h-server').textContent = '🔴 Error';
+    return;
+  }
+  document.getElementById('h-server').textContent  = h.server === 'online'      ? '🟢 Online'    : '🔴 Offline';
+  document.getElementById('h-db').textContent      = h.database === 'connected' ? '🟢 Connected' : '🔴 Error';
+  document.getElementById('h-latency').textContent = (h.db_latency_ms ?? '—') + ' ms';
+
+  const up = h.uptime_seconds || 0;
+  const jam   = Math.floor(up / 3600);
+  const menit = Math.floor((up % 3600) / 60);
+  const detik = up % 60;
+  document.getElementById('h-uptime').textContent = `${jam} jam ${menit} menit ${detik} detik`;
+  document.getElementById('h-time').textContent   = new Date(h.timestamp).toLocaleString('id-ID');
+}
+
+// ══════════════════════════════════════════
+// PENGATURAN SISTEM
+// ══════════════════════════════════════════
+async function loadConfig() {
+  document.getElementById('configTable').innerHTML = '<div class="loading">Memuat konfigurasi...</div>';
+  const rows = await apiFetch('/admin/api/config');
+  if (!rows || rows.length === 0) {
+    document.getElementById('configTable').innerHTML = '<div class="loading">Belum ada konfigurasi. Tambah di bawah.</div>';
+    return;
+  }
+  document.getElementById('configTable').innerHTML = `
+    <table class="dataTable">
+      <thead>
+        <tr><th>Key</th><th>Value</th><th>Diubah Oleh</th><th>Waktu Update</th></tr>
+      </thead>
+      <tbody>
+        ${rows.map(c => `
+          <tr>
+            <td><code style="color:#93c5fd">${c.key}</code></td>
+            <td>${c.value}</td>
+            <td>${c.updated_by || '—'}</td>
+            <td style="font-size:12px">${new Date(c.updated_at).toLocaleString('id-ID')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function saveConfig() {
+  const key   = document.getElementById('configKey').value.trim();
+  const value = document.getElementById('configValue').value.trim();
+  if (!key || !value) {
+    alert('Key dan value harus diisi');
+    return;
+  }
+  const result = await apiFetch('/admin/api/config', 'POST', { key, value });
+  if (result && result.success) {
+    document.getElementById('configKey').value   = '';
+    document.getElementById('configValue').value = '';
+    loadConfig();
+    alert('Konfigurasi berhasil disimpan');
+  } else {
+    alert('Gagal menyimpan: ' + (result ? result.error : 'koneksi error'));
+  }
 }
 </script>
 </body>
