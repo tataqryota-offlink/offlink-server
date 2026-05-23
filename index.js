@@ -168,6 +168,46 @@ async function initDB() {
       device_id  TEXT PRIMARY KEY,
       blocked_at TIMESTAMP DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id              SERIAL PRIMARY KEY,
+      device_id       TEXT UNIQUE NOT NULL REFERENCES devices(device_id),
+      full_name       TEXT,
+      phone           TEXT,
+      nik_hash        TEXT,
+      kyc_status      TEXT DEFAULT 'unverified',
+      kyc_verified_at TIMESTAMP,
+      created_at      TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id         SERIAL PRIMARY KEY,
+      admin_user TEXT NOT NULL,
+      action     TEXT NOT NULL,
+      target     TEXT,
+      detail     JSONB,
+      ip_address TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS aml_alerts (
+      id         SERIAL PRIMARY KEY,
+      device_id  TEXT NOT NULL,
+      alert_type TEXT NOT NULL,
+      detail     JSONB,
+      risk_level TEXT DEFAULT 'medium',
+      status     TEXT DEFAULT 'open',
+      handled_by TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      handled_at TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS system_config (
+      key        TEXT PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_by TEXT,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
   `);
   console.log('✅ Database tables ready');
 }
