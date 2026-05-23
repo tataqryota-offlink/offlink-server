@@ -589,7 +589,7 @@ if (token) {
 // HELPER: apiFetch
 // ══════════════════════════════════════════
 async function apiFetch(url, method = 'GET', body = null) {
-  const token = localStorage.getItem('adminToken');
+  const token = localStorage.getItem('offlink_admin_token');
   const opts = {
     method,
     headers: {
