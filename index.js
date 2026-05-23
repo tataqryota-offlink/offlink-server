@@ -649,7 +649,7 @@ app.post('/admin/users/unblock', verifyAdmin, async (req, res) => {
 // ─────────────────────────────────────────────
 // ADMIN — KYC & PENGGUNA
 // ─────────────────────────────────────────────
-app.get('/admin/api/users/list', adminAuth, async (req, res) => {
+app.get('/admin/api/users/list', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT d.device_id, d.balance, d.held_balance, d.created_at,
@@ -664,7 +664,7 @@ app.get('/admin/api/users/list', adminAuth, async (req, res) => {
   }
 });
 
-app.get('/admin/api/users/detail/:deviceId', adminAuth, async (req, res) => {
+app.get('/admin/api/users/detail/:deviceId', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT d.device_id, d.public_key, d.balance, d.held_balance, d.created_at,
@@ -681,7 +681,7 @@ app.get('/admin/api/users/detail/:deviceId', adminAuth, async (req, res) => {
   }
 });
 
-app.post('/admin/api/users/kyc/approve', adminAuth, async (req, res) => {
+app.post('/admin/api/users/kyc/approve', verifyAdmin, async (req, res) => {
   const { deviceId } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
   try {
@@ -702,7 +702,7 @@ app.post('/admin/api/users/kyc/approve', adminAuth, async (req, res) => {
   }
 });
 
-app.post('/admin/api/users/kyc/reject', adminAuth, async (req, res) => {
+app.post('/admin/api/users/kyc/reject', verifyAdmin, async (req, res) => {
   const { deviceId, reason } = req.body;
   if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
   try {
@@ -847,24 +847,6 @@ app.post('/admin/api/config', verifyAdmin, async (req, res) => {
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ─────────────────────────────────────────────
-// ADMIN — DAFTAR PENGGUNA
-// ─────────────────────────────────────────────
-app.get('/admin/api/users/list', adminAuth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT d.device_id, d.balance, d.held_balance, d.created_at,
-              u.full_name, u.phone, u.kyc_status, u.kyc_verified_at
-       FROM devices d
-       LEFT JOIN users u ON d.device_id = u.device_id
-       ORDER BY d.created_at DESC`
-    );
-    res.json(result.rows);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
 });
 
 // ─────────────────────────────────────────────
