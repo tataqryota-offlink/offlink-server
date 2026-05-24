@@ -225,11 +225,14 @@
       <!-- CATATAN PENGINGAT ADMIN -->
       <div style="background:#1e3a1e;border:1px solid #166534;border-radius:10px;padding:16px;margin-bottom:20px;font-size:13px;color:#bbf7d0;line-height:1.9">
         <div style="font-weight:700;color:#4ade80;margin-bottom:8px">📋 Panduan Alert AML — Kapan Alert Muncul?</div>
-        <div>🔴 <strong>LARGE_TRANSACTION (Risiko Tinggi)</strong> — Transaksi tunggal di atas <strong>Rp 500.000</strong></div>
-        <div>🟡 <strong>FREQUENT_TRANSFER (Risiko Sedang)</strong> — 5 transaksi atau lebih dari 1 device dalam <strong>1 jam</strong></div>
+        <div>🔴 <strong>LARGE_TRANSACTION (Risiko Tinggi)</strong> — Setiap transaksi tunggal di atas <strong>Rp 500.000</strong>, tanpa batas waktu</div>
+        <div>🔴 <strong>FREQUENT_TRANSFER — Pengirim (Risiko Tinggi)</strong> — 1 device kirim ke <strong>5+ device berbeda</strong> dalam 1 jam (ciri money mule)</div>
+        <div>🔴 <strong>FREQUENT_TRANSFER — Penerima (Risiko Tinggi)</strong> — 1 device terima dari <strong>5+ device berbeda</strong> dalam 1 jam (ciri pengumpulan dana ilegal)</div>
+        <div>🟡 <strong>FREQUENT_TRANSFER — Pasangan Sama (Risiko Sedang)</strong> — Pengirim dan penerima <strong>sama</strong> bertransaksi 5+ kali dalam 1 jam</div>
         <div style="margin-top:10px;color:#86efac">
-          ℹ️ Alert dibuat otomatis oleh sistem saat transaksi sync ke server.<br>
+          ℹ️ Alert dibuat otomatis saat transaksi sync ke server.<br>
           ✅ Klik <strong>Selesai</strong> jika sudah ditangani. Klik <strong>Abaikan</strong> jika dianggap wajar.<br>
+          ⚙️ Threshold bisa diubah di menu <strong>Pengaturan</strong>.<br>
           📌 Semua tindakan admin tercatat di menu <strong>Audit Log</strong>.
         </div>
       </div>

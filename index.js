@@ -435,7 +435,7 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
       [txId]
     );
     // Cek AML otomatis
-    checkAml(txId, senderId, amount);
+    checkAml(txId, senderId, receiverId, amount);
 
     res.json({ success: true, message: 'Transaksi tersimpan' });
   } catch (e) {
@@ -1039,30 +1039,57 @@ app.get('/admin/export/report/pdf', verifyAdmin, async (req, res) => {
 // ─────────────────────────────────────────────
 // AML OTOMATIS
 // ─────────────────────────────────────────────
-async function checkAml(txId, senderId, amount) {
+async function checkAml(txId, senderId, receiverId, amount) {
   try {
-    // Aturan 1: Transaksi besar > Rp 500.000
+    // Aturan 1: Transaksi besar > Rp 500.000 (per transaksi, tanpa batas waktu)
     if (amount >= 500000) {
       await pool.query(
         `INSERT INTO aml_alerts (device_id, alert_type, detail, risk_level, status)
-         VALUES ($1, 'LARGE_TRANSACTION', $2, 'high', 'open')
-         ON CONFLICT DO NOTHING`,
+         VALUES ($1, 'LARGE_TRANSACTION', $2, 'high', 'open')`,
         [senderId, JSON.stringify({ tx_id: txId, amount, threshold: 500000 })]
       );
     }
 
-    // Aturan 2: Lebih dari 5 transaksi dalam 1 jam
-    const freq = await pool.query(
-      `SELECT COUNT(*) FROM transactions
+    // Aturan 2: Pengirim kirim ke 5+ device berbeda dalam 1 jam
+    const freqSend = await pool.query(
+      `SELECT COUNT(DISTINCT receiver_id) as cnt FROM transactions
        WHERE sender_id = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
       [senderId]
     );
-    if (parseInt(freq.rows[0].count) >= 5) {
+    if (parseInt(freqSend.rows[0].cnt) >= 5) {
       await pool.query(
         `INSERT INTO aml_alerts (device_id, alert_type, detail, risk_level, status)
-         VALUES ($1, 'FREQUENT_TRANSFER', $2, 'medium', 'open')
-         ON CONFLICT DO NOTHING`,
-        [senderId, JSON.stringify({ count: freq.rows[0].count, window: '1 hour' })]
+         VALUES ($1, 'FREQUENT_TRANSFER', $2, 'high', 'open')`,
+        [senderId, JSON.stringify({ type: 'pengirim', distinct_receivers: freqSend.rows[0].cnt, window: '1 jam' })]
+      );
+    }
+
+    // Aturan 3: Penerima terima dari 5+ device berbeda dalam 1 jam
+    const freqRecv = await pool.query(
+      `SELECT COUNT(DISTINCT sender_id) as cnt FROM transactions
+       WHERE receiver_id = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+      [receiverId]
+    );
+    if (parseInt(freqRecv.rows[0].cnt) >= 5) {
+      await pool.query(
+        `INSERT INTO aml_alerts (device_id, alert_type, detail, risk_level, status)
+         VALUES ($1, 'FREQUENT_TRANSFER', $2, 'high', 'open')`,
+        [receiverId, JSON.stringify({ type: 'penerima', distinct_senders: freqRecv.rows[0].cnt, window: '1 jam' })]
+      );
+    }
+
+    // Aturan 4: Pengirim kirim 5+ kali ke orang yang sama dalam 1 jam
+    const freqSame = await pool.query(
+      `SELECT COUNT(*) as cnt FROM transactions
+       WHERE sender_id = $1 AND receiver_id = $2
+       AND created_at > NOW() - INTERVAL '1 hour'`,
+      [senderId, receiverId]
+    );
+    if (parseInt(freqSame.rows[0].cnt) >= 5) {
+      await pool.query(
+        `INSERT INTO aml_alerts (device_id, alert_type, detail, risk_level, status)
+         VALUES ($1, 'FREQUENT_TRANSFER', $2, 'medium', 'open')`,
+        [senderId, JSON.stringify({ type: 'pengirim_ke_penerima_sama', count: freqSame.rows[0].cnt, window: '1 jam' })]
       );
     }
   } catch (e) {
