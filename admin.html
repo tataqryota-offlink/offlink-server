@@ -153,7 +153,13 @@
       <div class="pageTitle">Transaksi</div>
       <div class="pageSubtitle">100 transaksi terakhir yang tersync ke server</div>
       <div class="tableWrap">
-        <div class="tableHeader"><h3>Daftar Transaksi</h3><button class="btnRefresh" onclick="loadTransactions()">🔄 Refresh</button></div>
+        <div class="tableHeader">
+          <h3>Daftar Transaksi</h3>
+          <div style="display:flex;gap:8px;">
+            <button class="btnRefresh" onclick="loadTransactions()">🔄 Refresh</button>
+            <button class="btnRefresh" style="background:#166534;" onclick="exportCSV('transactions')">⬇️ Export CSV</button>
+          </div>
+        </div>
         <div id="txTable"><div class="loading">Memuat data...</div></div>
       </div>
     </div>
@@ -163,7 +169,13 @@
       <div class="pageTitle">Perangkat</div>
       <div class="pageSubtitle">Semua perangkat terdaftar — kunci/buka akses</div>
       <div class="tableWrap">
-        <div class="tableHeader"><h3>Daftar Perangkat</h3><button class="btnRefresh" onclick="loadDevices()">🔄 Refresh</button></div>
+        <div class="tableHeader">
+          <h3>Daftar Perangkat</h3>
+          <div style="display:flex;gap:8px;">
+            <button class="btnRefresh" onclick="loadDevices()">🔄 Refresh</button>
+            <button class="btnRefresh" style="background:#166534;" onclick="exportCSV('users')">⬇️ Export CSV</button>
+          </div>
+        </div>
         <div id="devTable"><div class="loading">Memuat data...</div></div>
       </div>
     </div>
@@ -875,6 +887,16 @@ async function saveConfig() {
   } else {
     alert('Gagal menyimpan: ' + (result ? result.error : 'koneksi error'));
   }
+}
+
+// ══════════════════════════════════════════
+// EXPORT CSV
+// ══════════════════════════════════════════
+function exportCSV(type) {
+  const url = type === 'transactions'
+    ? '/admin/export/transactions/csv'
+    : '/admin/export/users/csv';
+  window.location.href = url;
 }
 </script>
 </body>
