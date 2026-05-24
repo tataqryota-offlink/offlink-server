@@ -11,7 +11,9 @@ const path     = require('path');
 const { Pool } = require('pg');
 const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcrypt');
-const ed = require('@noble/ed25519');
+const ed25519 = require('@noble/ed25519');
+const { sha512 } = require('@noble/hashes/sha512');
+ed25519.etc.sha512Sync = (...m) => sha512(...m);
 
 const app  = express();
 const port = process.env.PORT || 3000;
@@ -364,6 +366,19 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
     );
     if (deviceResult.rows.length === 0)
       return res.status(403).json({ error: 'Perangkat pengirim tidak terdaftar' });
+
+    // Verifikasi tanda tangan Ed25519
+    try {
+      const publicKeyBytes  = Buffer.from(senderId, 'base64');
+      const signatureBytes  = Buffer.from(hash, 'base64');
+      const signableData    = `${txId}|${receiverId}|${nonce}|`;
+      const messageBytes    = Buffer.from(signableData, 'utf8');
+      const valid = ed25519.verify(signatureBytes, messageBytes, publicKeyBytes);
+      if (!valid)
+        return res.status(401).json({ error: 'Tanda tangan transaksi tidak valid' });
+    } catch (e) {
+      return res.status(401).json({ error: 'Tanda tangan tidak bisa diverifikasi' });
+    }
 
     // Cek saldo mencukupi
     if (deviceResult.rows[0].balance < amount)
