@@ -1279,8 +1279,20 @@ app.post('/dispute/report', async (req, res) => {
       })]
     );
 
+    const ticket = generateTicketNumber();
+    const disputeResult = await pool.query(
+      `UPDATE disputes SET ticket_number = $1 WHERE tx_id = $2 AND reporter_id = $3 AND ticket_number IS NULL RETURNING id, ticket_number`,
+      [ticket, txId, reporterId]
+    );
+    const disputeRow = disputeResult.rows[0] || (await pool.query(
+      `SELECT id, ticket_number FROM disputes WHERE tx_id = $1 AND reporter_id = $2`,
+      [txId, reporterId]
+    )).rows[0];
+
     res.json({
       success        : true,
+      disputeId      : disputeRow?.id,
+      ticketNumber   : disputeRow?.ticket_number,
       txFoundOnServer,
       recommendation : txFoundOnServer ? 'HANGUS' : 'REFUND',
       message        : txFoundOnServer
