@@ -1258,7 +1258,6 @@ app.post('/dispute/report', async (req, res) => {
       : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
     await pool.query(
-      `INawait pool.query(
       `INSERT INTO disputes
          (reporter_id, tx_id, issue_type, description,
           tx_events_snapshot, chain_hash, issued_at, expired_at, deadline_at)
@@ -1291,9 +1290,7 @@ app.post('/dispute/report', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
-});SERT INTO disputes
-         (reporter_id, tx_i
-
+});
 // ─────────────────────────────────────────────
 // START SERVER
 // ─────────────────────────────────────────────
@@ -1302,3 +1299,5 @@ initDB().then(() => {
     console.log(`🚀 OFFLINK Server berjalan di port ${port}`);
   });
 });
+
+
