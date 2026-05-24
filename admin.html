@@ -1104,60 +1104,9 @@ async function loadDisputeDetail() {
   document.getElementById('disputeDetailTable').innerHTML =
     '<table class="dataTable"><thead><tr><th>ID</th><th>Pelapor</th><th>TX ID</th><th>Tipe</th><th>Rekomendasi</th><th>Status</th><th>Deadline</th><th>Aksi</th></tr></thead><tbody>' + tbody + '</tbody></table>';
 }
-  document.getElementById('disputeDetailTable').innerHTML = `
-    <table class="dataTable">
-      <thead>
-        <tr><th>ID</th><th>Pelapor</th><th>TX ID</th><th>Tipe</th><th>Rekomendasi</th><th>Status</th><th>Deadline</th><th>Aksi</th></tr>
-      </thead>
-      <tbody>
-        ${rows.map(d => {
-          const snapshot = d.tx_events_snapshot ? JSON.parse(d.tx_events_snapshot) : [];
-          const lastEvent = snapshot.length > 0 ? snapshot[snapshot.length-1] : null;
-          const rec = lastEvent?.recommendation || '—';
-          return `
-          <tr>
-            <td>${d.id}</td>
-            <td>
-              <div>${d.reporter_name || '—'}</div>
-              <div style="font-size:10px;color:#94a3b8">${d.reporter_phone || ''}</div>
-            </td>
-            <td style="font-size:11px">${d.tx_id ? d.tx_id.substring(0,16)+'...' : '—'}</td>
-            <td>${d.issue_type || '—'}</td>
-            <td><span style="color:${
-              rec === 'REFUND' ? '#4ade80' :
-              rec === 'HANGUS' ? '#f87171' : '#fbbf24'
-            }">${rec}</span></td>
-            <td><span style="color:${
-              d.status === 'resolved_refund' ? '#4ade80' :
-              d.status === 'hangus'          ? '#f87171' :
-              d.status === 'open'            ? '#fbbf24' : '#94a3b8'
-            }">${
-              d.status === 'resolved_refund' ? '✅ Direfund' :
-              d.status === 'hangus'          ? '❌ Hangus' :
-              d.status === 'open'            ? '⏳ Menunggu' : d.status
-            }</span></td>
-            <td style="font-size:12px">${d.deadline_at ? new Date(d.deadline_at).toLocaleDateString('id-ID') : '—'}</td>
-            <td>
-              ${d.status === 'open' ? `
-                <button onclick="resolveDispute(${d.id},'resolved_refund')"
-                  style="background:#166534;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:11px">
-                  ↩️ Refund
-                </button>
-                <button onclick="resolveDispute(${d.id},'hangus')"
-                  style="background:#7f1d1d;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:11px">
-                  ❌ Hangus
-                </button>
-              ` : '—'}
-            </td>
-          </tr>`
-        }).join('')}
-      </tbody>
-    </table>`;
-}
-
 async function resolveDispute(disputeId, decision) {
   const label = decision === 'resolved_refund' ? 'REFUND (dana dikembalikan ke HP A)' : 'HANGUS (dana tidak dikembalikan)';
-  const adminNote = prompt(`Keputusan: ${label}\n\nTulis catatan admin (opsional):`);
+  const adminNote = prompt('Keputusan: ' + label + '\n\nTulis catatan admin (opsional):');
   if (adminNote === null) return;
   const result = await apiFetch('/admin/api/disputes/resolve', 'POST', {
     disputeId, decision, adminNote
@@ -1166,6 +1115,10 @@ async function resolveDispute(disputeId, decision) {
     alert('Keputusan berhasil disimpan');
     loadDisputeDetail();
     loadHeldBalances();
+  } else {
+    alert('Gagal: ' + (result ? result.error : 'koneksi error'));
+  }
+}
 </script>
 </body>
 </html>
