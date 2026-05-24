@@ -1141,6 +1141,127 @@ app.get('/admin/api/transactions/detail/:deviceId', verifyAdmin, async (req, res
 });
 
 // ─────────────────────────────────────────────
+// HELD BALANCES & TX EVENTS
+// ─────────────────────────────────────────────
+
+// Catat dana tertahan per transaksi
+app.post('/tx/held', async (req, res) => {
+  const { txId, deviceId, amount, issuedAt, expiredAt } = req.body;
+  if (!txId || !deviceId || !amount)
+    return res.status(400).json({ error: 'txId, deviceId, amount wajib diisi' });
+  try {
+    await pool.query(
+      `INSERT INTO held_balances (tx_id, device_id, amount, status)
+       VALUES ($1, $2, $3, 'held')
+       ON CONFLICT (tx_id) DO NOTHING`,
+      [txId, deviceId, amount]
+    );
+    // Catat event QR diterbitkan
+    await pool.query(
+      `INSERT INTO tx_events (tx_id, device_id, event_type, detail)
+       VALUES ($1, $2, 'QR_ISSUED', $3)`,
+      [txId, deviceId, JSON.stringify({ amount, issuedAt, expiredAt })]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Ambil daftar dana tertahan per device
+app.get('/tx/held/:deviceId', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT h.tx_id, h.amount, h.status, h.reason, h.created_at, h.resolved_at,
+              t.receiver_id, u.full_name AS receiver_name
+       FROM held_balances h
+       LEFT JOIN transactions t ON h.tx_id = t.tx_id
+       LEFT JOIN users u ON t.receiver_id = u.device_id
+       WHERE h.device_id = $1
+       ORDER BY h.created_at DESC`,
+      [req.params.deviceId]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Catat event per langkah transaksi
+app.post('/tx/event', async (req, res) => {
+  const { txId, deviceId, eventType, detail } = req.body;
+  if (!txId || !deviceId || !eventType)
+    return res.status(400).json({ error: 'txId, deviceId, eventType wajib diisi' });
+  try {
+    await pool.query(
+      `INSERT INTO tx_events (tx_id, device_id, event_type, detail)
+       VALUES ($1, $2, $3, $4)`,
+      [txId, deviceId, eventType, JSON.stringify(detail || {})]
+    );
+    // Update status held_balance jika event CONFIRMED
+    if (eventType === 'TX_CONFIRMED') {
+      await pool.query(
+        `UPDATE held_balances SET status = 'released', resolved_at = NOW()
+         WHERE tx_id = $1`,
+        [txId]
+      );
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Ambil semua event per transaksi
+app.get('/tx/events/:txId', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT event_type, detail, created_at
+       FROM tx_events WHERE tx_id = $1
+       ORDER BY created_at ASC`,
+      [req.params.txId]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// PENGADUAN DIPERKUAT
+// ─────────────────────────────────────────────
+
+// Buat pengaduan dengan bukti histori
+app.post('/dispute/report', async (req, res) => {
+  const { reporterId, txId, issueType, description,
+          txEventsSnapshot, chainHash, issuedAt, expiredAt } = req.body;
+  if (!reporterId || !txId || !issueType)
+    return res.status(400).json({ error: 'reporterId, txId, issueType wajib diisi' });
+  try {
+    // Cek batas waktu 2 minggu
+    if (issuedAt) {
+      const issuedDate = new Date(issuedAt * 1000);
+      const deadline   = new Date(issuedDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+      if (new Date() > deadline)
+        return res.status(400).json({ error: 'Batas waktu pengaduan 2 minggu sudah lewat' });
+    }
+
+    // Cek apakah txId sudah sync ke server (penentu hangus/refund)
+    const txCheck = await pool.query(
+      'SELECT tx_id, receiver_id FROM transactions WHERE tx_id = $1',
+      [txId]
+    );
+    const txFoundOnServer = txCheck.rows.length > 0;
+
+    const deadline = issuedAt
+      ? new Date(issuedAt * 1000 + 14 * 24 * 60 * 60 * 1000)
+      : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+    await pool.query(
+      `INSERT INTO disputes
+         (reporter_id, tx_i
+
+// ─────────────────────────────────────────────
 // START SERVER
 // ─────────────────────────────────────────────
 initDB().then(() => {
