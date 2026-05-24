@@ -1098,6 +1098,49 @@ async function checkAml(txId, senderId, receiverId, amount) {
 }
 
 // ─────────────────────────────────────────────
+// ADMIN — HISTORY TRANSAKSI DETAIL
+// ─────────────────────────────────────────────
+app.get('/admin/api/transactions/detail', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT t.id, t.tx_id, t.sender_id, t.receiver_id, t.amount, 
+              t.status, t.flow_status, t.notes, t.created_at,
+              us.full_name AS sender_name, us.phone AS sender_phone,
+              ur.full_name AS receiver_name, ur.phone AS receiver_phone
+       FROM transactions t
+       LEFT JOIN users us ON t.sender_id = us.device_id
+       LEFT JOIN users ur ON t.receiver_id = ur.device_id
+       ORDER BY t.created_at DESC
+       LIMIT 100`
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/admin/api/transactions/detail/:deviceId', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT t.id, t.tx_id, t.sender_id, t.receiver_id, t.amount,
+              t.status, t.flow_status, t.notes, t.created_at,
+              us.full_name AS sender_name, us.phone AS sender_phone,
+              ur.full_name AS receiver_name, ur.phone AS receiver_phone
+       FROM transactions t
+       LEFT JOIN users us ON t.sender_id = us.device_id
+       LEFT JOIN users ur ON t.receiver_id = ur.device_id
+       WHERE t.sender_id = $1 OR t.receiver_id = $1
+       ORDER BY t.created_at DESC
+       LIMIT 100`,
+      [req.params.deviceId]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // START SERVER
 // ─────────────────────────────────────────────
 initDB().then(() => {

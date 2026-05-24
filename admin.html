@@ -123,6 +123,7 @@
       <div class="navItem" onclick="showSection('reconciliation')"><span class="navIcon">📋</span> Rekonsiliasi</div>
       <div class="navItem" onclick="showSection('auditlog')"><span class="navIcon">📝</span> Audit Log</div>
       <div class="navItem" onclick="showSection('health')"><span class="navIcon">💚</span> System Health</div>
+      <div class="navItem" onclick="showSection('txdetail')"><span class="navIcon">🔍</span> History Detail</div>
       <div class="navItem" onclick="showSection('config')"><span class="navIcon">⚙️</span> Pengaturan</div>
     </div>
     <div style="flex:1"></div>
@@ -308,9 +309,25 @@
         <button class="btnPrimary" style="width:auto;padding:10px 24px;" onclick="saveConfig()">Simpan</button>
       </div>
     </div>
-    
+
+    <!-- HISTORY TRANSAKSI DETAIL -->
+    <div class="section" id="sec-txdetail">
+      <div class="pageTitle">🔍 History Transaksi Detail</div>
+      <div class="pageSubtitle">Lacak alur setiap transaksi per device</div>
+      <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center">
+        <input type="text" id="txDetailDeviceId" placeholder="Masukkan Device ID untuk filter (kosongkan untuk semua)"
+          style="flex:1;padding:10px 14px;background:#0F1B2D;border:1px solid #2A5298;border-radius:8px;color:#E8F0FE;font-size:13px;outline:none">
+        <button class="btnRefresh" onclick="loadTxDetail()">🔍 Cari</button>
+        <button class="btnRefresh" onclick="document.getElementById('txDetailDeviceId').value='';loadTxDetail()">🔄 Semua</button>
+      </div>
+      <div class="tableWrap">
+        <div class="tableHeader"><h3>Daftar Transaksi Detail</h3></div>
+        <div id="txDetailTable"><div class="loading">Klik Cari atau Semua untuk memuat data</div></div>
+      </div>
+    </div>
+
   </div>
-</div>    
+</div>
 
 <!-- MODAL KUNCI PERANGKAT -->
 <div class="modal" id="modalLock">
@@ -408,6 +425,7 @@ if(name==='transactions') loadTransactions();
   if(name==='auditlog')       loadAuditLog();
   if(name==='health')         loadHealth();
   if(name==='config')         loadConfig();
+  if(name==='txdetail')       {}
 }
 
 // ─── FORMAT ───
@@ -915,6 +933,62 @@ function exportCSV(type) {
   window.location.href = url;
 }function exportPDF() {
   window.location.href = '/admin/export/report/pdf';
+}
+
+// ══════════════════════════════════════════
+// HISTORY TRANSAKSI DETAIL
+// ══════════════════════════════════════════
+async function loadTxDetail() {
+  const deviceId = document.getElementById('txDetailDeviceId').value.trim();
+  document.getElementById('txDetailTable').innerHTML = '<div class="loading">Memuat data...</div>';
+  const url = deviceId
+    ? `/admin/api/transactions/detail/${encodeURIComponent(deviceId)}`
+    : '/admin/api/transactions/detail';
+  const rows = await apiFetch(url);
+  if (!rows || rows.length === 0) {
+    document.getElementById('txDetailTable').innerHTML = '<div class="loading">Tidak ada data transaksi</div>';
+    return;
+  }
+  document.getElementById('txDetailTable').innerHTML = `
+    <table class="dataTable">
+      <thead>
+        <tr>
+          <th>TX ID</th>
+          <th>Pengirim</th>
+          <th>Penerima</th>
+          <th>Nominal</th>
+          <th>Status Alur</th>
+          <th>Waktu</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(t => `
+          <tr>
+            <td style="font-size:11px">${t.tx_id.substring(0,20)}...</td>
+            <td>
+              <div>${t.sender_name || '—'}</div>
+              <div style="font-size:10px;color:#94a3b8">${t.sender_phone || ''}</div>
+            </td>
+            <td>
+              <div>${t.receiver_name || '—'}</div>
+              <div style="font-size:10px;color:#94a3b8">${t.receiver_phone || ''}</div>
+            </td>
+            <td>Rp ${Number(t.amount).toLocaleString('id-ID')}</td>
+            <td>
+              <span style="color:${
+                t.flow_status === 'synced'   ? '#4ade80' :
+                t.flow_status === 'pending'  ? '#fbbf24' : '#f87171'
+              }">
+                ${t.flow_status === 'synced'  ? '✅ Tersync' :
+                  t.flow_status === 'pending' ? '⏳ Pending' : '❌ Gagal'}
+              </span>
+              ${t.notes ? `<div style="font-size:11px;color:#94a3b8">${t.notes}</div>` : ''}
+            </td>
+            <td style="font-size:12px">${new Date(t.created_at).toLocaleString('id-ID')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
 }
 </script>
 </body>
