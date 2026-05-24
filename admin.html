@@ -1077,6 +1077,33 @@ async function loadDisputeDetail() {
     document.getElementById('disputeDetailTable').innerHTML = '<div class="loading">Belum ada pengaduan</div>';
     return;
   }
+  let tbody = '';
+  for (const d of rows) {
+    const snapshot = d.tx_events_snapshot ? JSON.parse(d.tx_events_snapshot) : [];
+    const lastEvent = snapshot.length > 0 ? snapshot[snapshot.length-1] : null;
+    const rec = (lastEvent && lastEvent.recommendation) ? lastEvent.recommendation : '—';
+    const recColor = rec === 'REFUND' ? '#4ade80' : rec === 'HANGUS' ? '#f87171' : '#fbbf24';
+    const statusColor = d.status === 'resolved_refund' ? '#4ade80' : d.status === 'hangus' ? '#f87171' : d.status === 'open' ? '#fbbf24' : '#94a3b8';
+    const statusLabel = d.status === 'resolved_refund' ? '✅ Direfund' : d.status === 'hangus' ? '❌ Hangus' : d.status === 'open' ? '⏳ Menunggu' : d.status;
+    const deadline = d.deadline_at ? new Date(d.deadline_at).toLocaleDateString('id-ID') : '—';
+    const txShort = d.tx_id ? d.tx_id.substring(0,16)+'...' : '—';
+    const aksi = d.status === 'open'
+      ? '<button onclick="resolveDispute(' + d.id + ',\'resolved_refund\')" style="background:#166534;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:11px">↩️ Refund</button><button onclick="resolveDispute(' + d.id + ',\'hangus\')" style="background:#7f1d1d;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:11px">❌ Hangus</button>'
+      : '—';
+    tbody += '<tr>';
+    tbody += '<td>' + d.id + '</td>';
+    tbody += '<td><div>' + (d.reporter_name || '—') + '</div><div style="font-size:10px;color:#94a3b8">' + (d.reporter_phone || '') + '</div></td>';
+    tbody += '<td style="font-size:11px">' + txShort + '</td>';
+    tbody += '<td>' + (d.issue_type || '—') + '</td>';
+    tbody += '<td><span style="color:' + recColor + '">' + rec + '</span></td>';
+    tbody += '<td><span style="color:' + statusColor + '">' + statusLabel + '</span></td>';
+    tbody += '<td style="font-size:12px">' + deadline + '</td>';
+    tbody += '<td>' + aksi + '</td>';
+    tbody += '</tr>';
+  }
+  document.getElementById('disputeDetailTable').innerHTML =
+    '<table class="dataTable"><thead><tr><th>ID</th><th>Pelapor</th><th>TX ID</th><th>Tipe</th><th>Rekomendasi</th><th>Status</th><th>Deadline</th><th>Aksi</th></tr></thead><tbody>' + tbody + '</tbody></table>';
+}
   document.getElementById('disputeDetailTable').innerHTML = `
     <table class="dataTable">
       <thead>
