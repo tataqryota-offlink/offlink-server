@@ -11,6 +11,7 @@ const path     = require('path');
 const { Pool } = require('pg');
 const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcrypt');
+const cookieParser = require('cookie-parser');
 const ed25519 = require('@noble/ed25519');
 const crypto = require('crypto');
 ed25519.etc.sha512Sync = (...msgs) => {
@@ -52,6 +53,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));          
 app.use(express.json());
+app.use(cookieParser());
 
 // ─────────────────────────────────────────────
 // RATE LIMITING
@@ -85,9 +87,10 @@ const nonceLimiter = rateLimit({
 // ADMIN AUTH MIDDLEWARE
 // ─────────────────────────────────────────────
 function verifyAdmin(req, res, next) {
-  const auth = req.headers['authorization'];
-  if (!auth) return res.status(401).json({ error: 'Token tidak ada' });
-  const token = auth.replace('Bearer ', '');
+  // Coba dari cookie dulu, fallback ke Authorization header
+  const token = req.cookies?.admin_token || 
+    (req.headers['authorization'] || '').replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'Token tidak ada' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.role !== 'admin') return res.status(403).json({ error: 'Bukan admin' });
@@ -505,6 +508,12 @@ app.post('/topup/fee', async (req, res) => {
 // ROUTES — ADMIN
 // ─────────────────────────────────────────────
 
+// Logout admin
+app.post('/admin/logout', (req, res) => {
+  res.clearCookie('admin_token');
+  res.json({ success: true });
+});
+
 // Login admin
 app.post('/admin/login', async (req, res) => {
   const { username, password } = req.body;
@@ -523,7 +532,13 @@ app.post('/admin/login', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
-    return res.json({ success: true, token });
+    res.cookie('admin_token', token, {
+      httpOnly : true,
+      secure   : true,
+      sameSite : 'strict',
+      maxAge   : 8 * 60 * 60 * 1000
+    });
+    return res.json({ success: true });
   }
   return res.status(401).json({ error: 'Username atau password salah' });
 });

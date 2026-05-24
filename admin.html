@@ -340,9 +340,9 @@ async function doLogin() {
       body: JSON.stringify({username:u, password:p})
     });
     const d = await r.json();
-    if (d.token) {
-      token = d.token;
-      localStorage.setItem('offlink_admin_token', token);
+    if (d.success) {
+      token = '';
+      localStorage.removeItem('offlink_admin_token');
       document.getElementById('loginPage').style.display = 'none';
       document.getElementById('mainPage').style.display = 'flex';
       loadStats();
@@ -352,7 +352,8 @@ async function doLogin() {
   } catch(e) { err.textContent = 'Gagal terhubung ke server'; err.style.display='block'; }
 }
 
-function doLogout() {
+async function doLogout() {
+  await fetch('/admin/logout', { method: 'POST' });
   localStorage.removeItem('offlink_admin_token');
   token = '';
   document.getElementById('mainPage').style.display = 'none';
@@ -579,11 +580,15 @@ window.onclick = (e) => {
 };
 
 // ─── INIT ───
-if (token) {
-  document.getElementById('loginPage').style.display = 'none';
-  document.getElementById('mainPage').style.display = 'flex';
-  loadStats();
-}
+// Cek apakah sudah login via cookie
+fetch('/admin/stats', { credentials: 'include' })
+  .then(r => {
+    if (r.ok) {
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('mainPage').style.display = 'flex';
+      loadStats();
+    }
+  }).catch(() => {});
 
 // ══════════════════════════════════════════
 // HELPER: apiFetch
