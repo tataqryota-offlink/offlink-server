@@ -868,6 +868,24 @@ app.post('/admin/api/config', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Update data user dari app
+app.post('/device/userdata', async (req, res) => {
+  const { deviceId, fullName, phone } = req.body;
+  if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
+  try {
+    await pool.query(
+      `INSERT INTO users (device_id, full_name, phone, kyc_status)
+       VALUES ($1, $2, $3, 'unverified')
+       ON CONFLICT (device_id) DO UPDATE
+       SET full_name = $2, phone = $3`,
+      [deviceId, fullName || null, phone || null]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Cek status device
 app.get('/device/status/:deviceId', async (req, res) => {
   try {
@@ -882,6 +900,8 @@ app.get('/device/status/:deviceId', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+
 
 // ─────────────────────────────────────────────
 // START SERVER
