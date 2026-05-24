@@ -124,6 +124,8 @@
       <div class="navItem" onclick="showSection('auditlog')"><span class="navIcon">📝</span> Audit Log</div>
       <div class="navItem" onclick="showSection('health')"><span class="navIcon">💚</span> System Health</div>
       <div class="navItem" onclick="showSection('txdetail')"><span class="navIcon">🔍</span> History Detail</div>
+      <div class="navItem" onclick="showSection('heldbalances')"><span class="navIcon">🔒</span> Dana Tertahan</div>
+      <div class="navItem" onclick="showSection('disputedetail')"><span class="navIcon">⚖️</span> Pengaduan</div>
       <div class="navItem" onclick="showSection('config')"><span class="navIcon">⚙️</span> Pengaturan</div>
     </div>
     <div style="flex:1"></div>
@@ -324,6 +326,40 @@
         <div class="tableHeader"><h3>Daftar Transaksi Detail</h3></div>
         <div id="txDetailTable"><div class="loading">Klik Cari atau Semua untuk memuat data</div></div>
       </div>
+    <!-- DANA TERTAHAN -->
+    <div class="section" id="sec-heldbalances">
+      <div class="pageTitle">🔒 Dana Tertahan</div>
+      <div class="pageSubtitle">Monitor dana tertahan per transaksi dari semua device</div>
+      <div class="tableWrap">
+        <div class="tableHeader">
+          <h3>Daftar Dana Tertahan</h3>
+          <button class="btnRefresh" onclick="loadHeldBalances()">🔄 Refresh</button>
+        </div>
+        <div id="heldTable"><div class="loading">Memuat data...</div></div>
+      </div>
+    </div>
+
+    <!-- PENGADUAN DETAIL -->
+    <div class="section" id="sec-disputedetail">
+      <div class="pageTitle">⚖️ Pengaduan</div>
+      <div class="pageSubtitle">Kelola pengaduan dana tertahan dari pengguna</div>
+      <div style="background:#1e1a2e;border:1px solid #7c3aed;border-radius:10px;padding:16px;margin-bottom:20px;font-size:13px;color:#ddd6fe;line-height:1.9">
+        <div style="font-weight:700;color:#a78bfa;margin-bottom:8px">📋 Panduan Keputusan Pengaduan</div>
+        <div>🟢 <strong>REFUND</strong> — txId tidak ditemukan di server = HP B belum terima dana = dana bisa dikembalikan ke HP A</div>
+        <div>🔴 <strong>HANGUS</strong> — txId ditemukan di server = HP B sudah terima dana = dana tidak bisa dikembalikan</div>
+        <div>🟡 <strong>TUNGGU HP B ONLINE</strong> — txId tidak ada tapi HP B belum pernah sync = minta HP A hubungi HP B untuk aktifkan internet</div>
+        <div style="margin-top:10px;color:#c4b5fd">
+          ⏰ Batas waktu pengaduan <strong>2 minggu</strong> sejak transaksi.<br>
+          📌 Semua keputusan tercatat di Audit Log.
+        </div>
+      </div>
+      <div class="tableWrap">
+        <div class="tableHeader">
+          <h3>Daftar Pengaduan</h3>
+          <button class="btnRefresh" onclick="loadDisputeDetail()">🔄 Refresh</button>
+        </div>
+        <div id="disputeDetailTable"><div class="loading">Memuat data...</div></div>
+      </div>
     </div>
 
   </div>
@@ -426,6 +462,8 @@ if(name==='transactions') loadTransactions();
   if(name==='health')         loadHealth();
   if(name==='config')         loadConfig();
   if(name==='txdetail')       {}
+  if(name==='heldbalances')   loadHeldBalances();
+  if(name==='disputedetail')  loadDisputeDetail();
 }
 
 // ─── FORMAT ───
@@ -990,6 +1028,117 @@ async function loadTxDetail() {
       </tbody>
     </table>`;
 }
+// ══════════════════════════════════════════
+// DANA TERTAHAN
+// ══════════════════════════════════════════
+async function loadHeldBalances() {
+  document.getElementById('heldTable').innerHTML = '<div class="loading">Memuat data...</div>';
+  const rows = await apiFetch('/admin/api/held-balances');
+  if (!rows || rows.length === 0) {
+    document.getElementById('heldTable').innerHTML = '<div class="loading">Tidak ada dana tertahan</div>';
+    return;
+  }
+  document.getElementById('heldTable').innerHTML = `
+    <table class="dataTable">
+      <thead>
+        <tr><th>TX ID</th><th>Nama</th><th>No HP</th><th>Nominal</th><th>Status</th><th>Dibuat</th><th>Diselesaikan</th></tr>
+      </thead>
+      <tbody>
+        ${rows.map(h => `
+          <tr>
+            <td style="font-size:11px">${h.tx_id.substring(0,20)}...</td>
+            <td>${h.full_name || '—'}</td>
+            <td>${h.phone || '—'}</td>
+            <td>Rp ${Number(h.amount).toLocaleString('id-ID')}</td>
+            <td><span style="color:${
+              h.status === 'released' ? '#4ade80' :
+              h.status === 'refunded' ? '#60a5fa' :
+              h.status === 'hangus'   ? '#f87171' : '#fbbf24'
+            }">
+              ${h.status === 'released' ? '✅ Selesai' :
+                h.status === 'refunded' ? '↩️ Direfund' :
+                h.status === 'hangus'   ? '❌ Hangus' : '🔒 Tertahan'}
+            </span></td>
+            <td style="font-size:12px">${new Date(h.created_at).toLocaleString('id-ID')}</td>
+            <td style="font-size:12px">${h.resolved_at ? new Date(h.resolved_at).toLocaleString('id-ID') : '—'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ══════════════════════════════════════════
+// PENGADUAN DETAIL
+// ══════════════════════════════════════════
+async function loadDisputeDetail() {
+  document.getElementById('disputeDetailTable').innerHTML = '<div class="loading">Memuat data...</div>';
+  const rows = await apiFetch('/admin/api/disputes/detail');
+  if (!rows || rows.length === 0) {
+    document.getElementById('disputeDetailTable').innerHTML = '<div class="loading">Belum ada pengaduan</div>';
+    return;
+  }
+  document.getElementById('disputeDetailTable').innerHTML = `
+    <table class="dataTable">
+      <thead>
+        <tr><th>ID</th><th>Pelapor</th><th>TX ID</th><th>Tipe</th><th>Rekomendasi</th><th>Status</th><th>Deadline</th><th>Aksi</th></tr>
+      </thead>
+      <tbody>
+        ${rows.map(d => {
+          const snapshot = d.tx_events_snapshot ? JSON.parse(d.tx_events_snapshot) : [];
+          const lastEvent = snapshot.length > 0 ? snapshot[snapshot.length-1] : null;
+          const rec = lastEvent?.recommendation || '—';
+          return `
+          <tr>
+            <td>${d.id}</td>
+            <td>
+              <div>${d.reporter_name || '—'}</div>
+              <div style="font-size:10px;color:#94a3b8">${d.reporter_phone || ''}</div>
+            </td>
+            <td style="font-size:11px">${d.tx_id ? d.tx_id.substring(0,16)+'...' : '—'}</td>
+            <td>${d.issue_type || '—'}</td>
+            <td><span style="color:${
+              rec === 'REFUND' ? '#4ade80' :
+              rec === 'HANGUS' ? '#f87171' : '#fbbf24'
+            }">${rec}</span></td>
+            <td><span style="color:${
+              d.status === 'resolved_refund' ? '#4ade80' :
+              d.status === 'hangus'          ? '#f87171' :
+              d.status === 'open'            ? '#fbbf24' : '#94a3b8'
+            }">${
+              d.status === 'resolved_refund' ? '✅ Direfund' :
+              d.status === 'hangus'          ? '❌ Hangus' :
+              d.status === 'open'            ? '⏳ Menunggu' : d.status
+            }</span></td>
+            <td style="font-size:12px">${d.deadline_at ? new Date(d.deadline_at).toLocaleDateString('id-ID') : '—'}</td>
+            <td>
+              ${d.status === 'open' ? `
+                <button onclick="resolveDispute(${d.id},'resolved_refund')"
+                  style="background:#166534;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:11px">
+                  ↩️ Refund
+                </button>
+                <button onclick="resolveDispute(${d.id},'hangus')"
+                  style="background:#7f1d1d;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:11px">
+                  ❌ Hangus
+                </button>
+              ` : '—'}
+            </td>
+          </tr>`
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function resolveDispute(disputeId, decision) {
+  const label = decision === 'resolved_refund' ? 'REFUND (dana dikembalikan ke HP A)' : 'HANGUS (dana tidak dikembalikan)';
+  const adminNote = prompt(`Keputusan: ${label}\n\nTulis catatan admin (opsional):`);
+  if (adminNote === null) return;
+  const result = await apiFetch('/admin/api/disputes/resolve', 'POST', {
+    disputeId, decision, adminNote
+  });
+  if (result && result.success) {
+    alert('Keputusan berhasil disimpan');
+    loadDisputeDetail();
+    loadHeldBalances();
 </script>
 </body>
 </html>
