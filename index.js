@@ -12,7 +12,7 @@ const { Pool } = require('pg');
 const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcrypt');
 const ed25519 = require('@noble/ed25519');
-const { sha512 } = require('@noble/hashes/sha512');
+const { sha512 } = require('@noble/hashes/sha2');
 ed25519.etc.sha512Sync = (...m) => sha512(...m);
 
 const app  = express();
