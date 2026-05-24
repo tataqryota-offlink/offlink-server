@@ -1291,6 +1291,147 @@ app.post('/dispute/report', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ─────────────────────────────────────────────
+// DISPUTE MESSAGES (SISTEM PESAN PENGADUAN)
+// ─────────────────────────────────────────────
+
+// Generate nomor tiket otomatis
+function generateTicketNumber() {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const rand = Math.floor(Math.random() * 9000 + 1000);
+  return `ADU-${yy}${mm}${dd}-${rand}`;
+}
+
+// Update ticket_number saat pengaduan dibuat (patch endpoint lama)
+app.post('/dispute/init-ticket', async (req, res) => {
+  const { disputeId } = req.body;
+  try {
+    const ticket = generateTicketNumber();
+    await pool.query(
+      `UPDATE disputes SET ticket_number = $1 WHERE id = $2 AND ticket_number IS NULL`,
+      [ticket, disputeId]
+    );
+    const result = await pool.query(
+      `SELECT ticket_number FROM disputes WHERE id = $1`, [disputeId]
+    );
+    res.json({ ticketNumber: result.rows[0]?.ticket_number });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// User kirim pesan
+app.post('/dispute/message', async (req, res) => {
+  const { disputeId, deviceId, message } = req.body;
+  if (!disputeId || !deviceId || !message)
+    return res.status(400).json({ error: 'disputeId, deviceId, message wajib diisi' });
+  try {
+    // Pastikan dispute milik device ini
+    const check = await pool.query(
+      `SELECT id, ticket_number FROM disputes WHERE id = $1 AND reporter_id = $2`,
+      [disputeId, deviceId]
+    );
+    if (check.rows.length === 0)
+      return res.status(403).json({ error: 'Pengaduan tidak ditemukan' });
+
+    await pool.query(
+      `INSERT INTO dispute_messages (dispute_id, sender_type, sender_id, message)
+       VALUES ($1, 'user', $2, $3)`,
+      [disputeId, deviceId, message]
+    );
+    await pool.query(
+      `UPDATE disputes SET last_reply_at = NOW(), reply_status = 'waiting' WHERE id = $1`,
+      [disputeId]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// User ambil semua pesan per pengaduan
+app.get('/dispute/messages/:disputeId/:deviceId', async (req, res) => {
+  try {
+    const { disputeId, deviceId } = req.params;
+    // Verifikasi kepemilikan
+    const check = await pool.query(
+      `SELECT id FROM disputes WHERE id = $1 AND reporter_id = $2`,
+      [disputeId, deviceId]
+    );
+    if (check.rows.length === 0)
+      return res.status(403).json({ error: 'Akses ditolak' });
+
+    const result = await pool.query(
+      `SELECT sender_type, message, created_at
+       FROM dispute_messages WHERE dispute_id = $1
+       ORDER BY created_at ASC`,
+      [disputeId]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// User ambil daftar semua pengaduannya
+app.get('/dispute/list/:deviceId', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT d.id, d.ticket_number, d.tx_id, d.issue_type, d.status,
+              d.reply_status, d.created_at, d.last_reply_at,
+              h.amount
+       FROM disputes d
+       LEFT JOIN held_balances h ON d.tx_id = h.tx_id
+       WHERE d.reporter_id = $1
+       ORDER BY d.created_at DESC`,
+      [req.params.deviceId]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin kirim pesan balasan
+app.post('/admin/api/dispute/reply', verifyAdmin, async (req, res) => {
+  const { disputeId, message } = req.body;
+  if (!disputeId || !message)
+    return res.status(400).json({ error: 'disputeId dan message wajib diisi' });
+  try {
+    await pool.query(
+      `INSERT INTO dispute_messages (dispute_id, sender_type, sender_id, message)
+       VALUES ($1, 'admin', 'admin', $2)`,
+      [disputeId, message]
+    );
+    await pool.query(
+      `UPDATE disputes SET last_reply_at = NOW(), reply_status = 'replied' WHERE id = $1`,
+      [disputeId]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Admin ambil semua pesan per pengaduan
+app.get('/admin/api/dispute/messages/:disputeId', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT sender_type, sender_id, message, created_at
+       FROM dispute_messages WHERE dispute_id = $1
+       ORDER BY created_at ASC`,
+      [req.params.disputeId]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─────────────────────────────────────────────
 // START SERVER
 // ─────────────────────────────────────────────
