@@ -921,7 +921,46 @@ app.get('/device/status/:deviceId', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────
+// ADMIN — EXPORT DATA
+// ─────────────────────────────────────────────
+app.get('/admin/export/transactions/csv', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT tx_id, sender_id, receiver_id, amount, status, created_at FROM transactions ORDER BY created_at DESC'
+    );
+    const rows = result.rows;
+    const header = 'TX ID,Pengirim,Penerima,Nominal (Rp),Status,Waktu\n';
+    const csv = rows.map(r =>
+      `"${r.tx_id}","${r.sender_id}","${r.receiver_id}",${r.amount},"${r.status}","${new Date(r.created_at).toLocaleString('id-ID')}"`
+    ).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="offlink-transaksi.csv"');
+    res.send(header + csv);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
+app.get('/admin/export/users/csv', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT d.device_id, u.full_name, u.phone, u.kyc_status, d.balance, d.created_at
+       FROM devices d LEFT JOIN users u ON d.device_id = u.device_id
+       ORDER BY d.created_at DESC`
+    );
+    const rows = result.rows;
+    const header = 'Device ID,Nama,No HP,KYC Status,Saldo (Rp),Terdaftar\n';
+    const csv = rows.map(r =>
+      `"${r.device_id}","${r.full_name || ''}","${r.phone || ''}","${r.kyc_status || 'unverified'}",${r.balance},"${new Date(r.created_at).toLocaleString('id-ID')}"`
+    ).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="offlink-pengguna.csv"');
+    res.send(header + csv);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // ─────────────────────────────────────────────
 // START SERVER
