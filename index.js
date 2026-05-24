@@ -240,6 +240,11 @@ app.get('/time', (req, res) => {
 
 // 1. Daftarkan perangkat
 app.post('/device/register', registerLimiter, async (req, res) => {
+  // Validasi device secret
+  const secret = req.headers['x-device-secret'];
+  if (secret !== process.env.DEVICE_SECRET)
+    return res.status(401).json({ error: 'Akses tidak diizinkan' });
+
   const { deviceId, publicKey } = req.body;
   if (!deviceId || !publicKey)
     return res.status(400).json({ error: 'deviceId dan publicKey wajib diisi' });
