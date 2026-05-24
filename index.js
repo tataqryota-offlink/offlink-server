@@ -434,6 +434,9 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
       'INSERT INTO used_tx_ids (tx_id) VALUES ($1) ON CONFLICT DO NOTHING',
       [txId]
     );
+    // Cek AML otomatis
+    checkAml(txId, senderId, amount);
+
     res.json({ success: true, message: 'Transaksi tersimpan' });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -1032,6 +1035,40 @@ app.get('/admin/export/report/pdf', verifyAdmin, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ─────────────────────────────────────────────
+// AML OTOMATIS
+// ─────────────────────────────────────────────
+async function checkAml(txId, senderId, amount) {
+  try {
+    // Aturan 1: Transaksi besar > Rp 500.000
+    if (amount >= 500000) {
+      await pool.query(
+        `INSERT INTO aml_alerts (device_id, alert_type, detail, risk_level, status)
+         VALUES ($1, 'LARGE_TRANSACTION', $2, 'high', 'open')
+         ON CONFLICT DO NOTHING`,
+        [senderId, JSON.stringify({ tx_id: txId, amount, threshold: 500000 })]
+      );
+    }
+
+    // Aturan 2: Lebih dari 5 transaksi dalam 1 jam
+    const freq = await pool.query(
+      `SELECT COUNT(*) FROM transactions
+       WHERE sender_id = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+      [senderId]
+    );
+    if (parseInt(freq.rows[0].count) >= 5) {
+      await pool.query(
+        `INSERT INTO aml_alerts (device_id, alert_type, detail, risk_level, status)
+         VALUES ($1, 'FREQUENT_TRANSFER', $2, 'medium', 'open')
+         ON CONFLICT DO NOTHING`,
+        [senderId, JSON.stringify({ count: freq.rows[0].count, window: '1 hour' })]
+      );
+    }
+  } catch (e) {
+    console.error('AML check error:', e.message);
+  }
+}
 
 // ─────────────────────────────────────────────
 // START SERVER
