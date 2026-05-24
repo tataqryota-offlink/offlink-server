@@ -868,6 +868,21 @@ app.post('/admin/api/config', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Cek status device
+app.get('/device/status/:deviceId', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT status FROM device_status WHERE device_id = $1',
+      [req.params.deviceId]
+    );
+    if (result.rows.length === 0)
+      return res.json({ status: 'active' });
+    res.json({ status: result.rows[0].status });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─────────────────────────────────────────────
 // START SERVER
 // ─────────────────────────────────────────────
