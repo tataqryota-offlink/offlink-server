@@ -963,6 +963,77 @@ app.get('/admin/export/users/csv', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// ADMIN — EXPORT PDF
+// ─────────────────────────────────────────────
+const PDFDocument = require('pdfkit');
+
+app.get('/admin/export/report/pdf', verifyAdmin, async (req, res) => {
+  try {
+    const [txResult, userResult, amlResult, recon] = await Promise.all([
+      pool.query('SELECT * FROM transactions ORDER BY created_at DESC LIMIT 50'),
+      pool.query(`SELECT d.device_id, u.full_name, u.phone, u.kyc_status, d.balance
+                  FROM devices d LEFT JOIN users u ON d.device_id = u.device_id
+                  ORDER BY d.created_at DESC`),
+      pool.query("SELECT COUNT(*) FROM aml_alerts WHERE status='open'"),
+      pool.query(`SELECT COUNT(*) as total_tx, COALESCE(SUM(amount),0) as total_volume
+                  FROM transactions`)
+    ]);
+
+    const doc = new PDFDocument({ margin: 50 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="offlink-laporan.pdf"');
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(20).font('Helvetica-Bold').text('OFFLINK', { align: 'center' });
+    doc.fontSize(12).font('Helvetica').text('Laporan Sistem Pembayaran Offline', { align: 'center' });
+    doc.fontSize(10).text(`Dicetak: ${new Date().toLocaleString('id-ID')}`, { align: 'center' });
+    doc.moveDown(2);
+
+    // Ringkasan
+    doc.fontSize(14).font('Helvetica-Bold').text('RINGKASAN SISTEM');
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(0.5);
+    doc.fontSize(10).font('Helvetica');
+    doc.text(`Total Transaksi    : ${recon.rows[0].total_tx}`);
+    doc.text(`Total Volume       : Rp ${Number(recon.rows[0].total_volume).toLocaleString('id-ID')}`);
+    doc.text(`Total Pengguna     : ${userResult.rows.length}`);
+    doc.text(`Pengguna Verified  : ${userResult.rows.filter(u => u.kyc_status === 'verified').length}`);
+    doc.text(`Alert AML Terbuka  : ${amlResult.rows[0].count}`);
+    doc.moveDown(2);
+
+    // Daftar Pengguna
+    doc.fontSize(14).font('Helvetica-Bold').text('DAFTAR PENGGUNA');
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(0.5);
+    doc.fontSize(9).font('Helvetica');
+    userResult.rows.forEach((u, i) => {
+      doc.text(
+        `${i+1}. ${u.full_name || 'Belum diisi'} | ${u.phone || '-'} | KYC: ${u.kyc_status || 'unverified'} | Saldo: Rp ${Number(u.balance || 0).toLocaleString('id-ID')}`,
+        { lineGap: 2 }
+      );
+    });
+    doc.moveDown(2);
+
+    // 50 Transaksi Terakhir
+    doc.fontSize(14).font('Helvetica-Bold').text('50 TRANSAKSI TERAKHIR');
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(0.5);
+    doc.fontSize(9).font('Helvetica');
+    txResult.rows.forEach((t, i) => {
+      doc.text(
+        `${i+1}. ${t.tx_id.substring(0,20)}... | Rp ${Number(t.amount).toLocaleString('id-ID')} | ${t.status} | ${new Date(t.created_at).toLocaleString('id-ID')}`,
+        { lineGap: 2 }
+      );
+    });
+
+    doc.end();
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // START SERVER
 // ─────────────────────────────────────────────
 initDB().then(() => {

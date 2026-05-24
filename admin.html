@@ -157,6 +157,7 @@
           <h3>Daftar Transaksi</h3>
           <div style="display:flex;gap:8px;">
             <button class="btnRefresh" onclick="loadTransactions()">🔄 Refresh</button>
+            <button class="btnRefresh" style="background:#7c3aed;" onclick="exportPDF()">📄 Export PDF</button>
             <button class="btnRefresh" style="background:#166534;" onclick="exportCSV('transactions')">⬇️ Export CSV</button>
           </div>
         </div>
@@ -897,6 +898,8 @@ function exportCSV(type) {
     ? '/admin/export/transactions/csv'
     : '/admin/export/users/csv';
   window.location.href = url;
+}function exportPDF() {
+  window.location.href = '/admin/export/report/pdf';
 }
 </script>
 </body>
