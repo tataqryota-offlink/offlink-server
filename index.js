@@ -1258,7 +1258,40 @@ app.post('/dispute/report', async (req, res) => {
       : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
     await pool.query(
+      `INawait pool.query(
       `INSERT INTO disputes
+         (reporter_id, tx_id, issue_type, description,
+          tx_events_snapshot, chain_hash, issued_at, expired_at, deadline_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       ON CONFLICT DO NOTHING`,
+      [reporterId, txId, issueType, description || '',
+       JSON.stringify(txEventsSnapshot || []),
+       chainHash || '', issuedAt || null, expiredAt || null, deadline]
+    );
+
+    // Catat event pengaduan
+    await pool.query(
+      `INSERT INTO tx_events (tx_id, device_id, event_type, detail)
+       VALUES ($1, $2, 'DISPUTE_FILED', $3)`,
+      [txId, reporterId, JSON.stringify({
+        issueType,
+        txFoundOnServer,
+        recommendation: txFoundOnServer ? 'HANGUS' : 'REFUND'
+      })]
+    );
+
+    res.json({
+      success        : true,
+      txFoundOnServer,
+      recommendation : txFoundOnServer ? 'HANGUS' : 'REFUND',
+      message        : txFoundOnServer
+        ? 'Dana kemungkinan sudah diterima HP B. Admin akan verifikasi.'
+        : 'Dana kemungkinan belum diterima HP B. Admin akan proses refund.'
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});SERT INTO disputes
          (reporter_id, tx_i
 
 // ─────────────────────────────────────────────
