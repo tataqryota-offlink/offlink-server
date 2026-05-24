@@ -12,8 +12,12 @@ const { Pool } = require('pg');
 const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcrypt');
 const ed25519 = require('@noble/ed25519');
-const { sha512 } = require('@noble/hashes/sha2');
-ed25519.etc.sha512Sync = (...m) => sha512(...m);
+const crypto = require('crypto');
+ed25519.etc.sha512Sync = (...msgs) => {
+  const h = crypto.createHash('sha512');
+  msgs.forEach(m => h.update(m));
+  return Uint8Array.from(h.digest());
+};
 
 const app  = express();
 const port = process.env.PORT || 3000;
