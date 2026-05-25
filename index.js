@@ -20,8 +20,8 @@ ed25519.etc.sha512Sync = (...msgs) => {
   return Uint8Array.from(h.digest());
 };
 
-app.set('trust proxy', 1);
 const app  = express();
+app.set('trust proxy', 1);
 const port = process.env.PORT || 3000;
 
 // ─────────────────────────────────────────────
