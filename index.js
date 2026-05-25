@@ -218,7 +218,47 @@ async function initDB() {
       updated_by TEXT,
       updated_at TIMESTAMP DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS held_balances (
+      tx_id       TEXT PRIMARY KEY,
+      device_id   TEXT NOT NULL,
+      amount      BIGINT NOT NULL,
+      status      TEXT DEFAULT 'held',
+      reason      TEXT DEFAULT '',
+      created_at  TIMESTAMP DEFAULT NOW(),
+      resolved_at TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS tx_events (
+      id          SERIAL PRIMARY KEY,
+      tx_id       TEXT NOT NULL,
+      device_id   TEXT NOT NULL,
+      event_type  TEXT NOT NULL,
+      detail      JSONB,
+      created_at  TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS dispute_messages (
+      id           SERIAL PRIMARY KEY,
+      dispute_id   INT NOT NULL,
+      sender_type  TEXT NOT NULL,
+      sender_id    TEXT NOT NULL,
+      message      TEXT NOT NULL,
+      created_at   TIMESTAMP DEFAULT NOW()
+    );
   `);
+
+  await pool.query(`
+      ALTER TABLE disputes
+        ADD COLUMN IF NOT EXISTS ticket_number TEXT,
+        ADD COLUMN IF NOT EXISTS deadline_at TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS last_reply_at TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS reply_status TEXT DEFAULT 'waiting';
+
+      ALTER TABLE transactions
+        ADD COLUMN IF NOT EXISTS flow_status TEXT DEFAULT 'synced',
+        ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
+    `);
   console.log('✅ Database tables ready');
 }
 
@@ -1440,6 +1480,84 @@ app.get('/admin/api/dispute/messages/:disputeId', verifyAdmin, async (req, res) 
     );
     res.json(result.rows);
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ADMIN — HELD BALANCES
+app.get('/admin/api/held-balances', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT h.tx_id, h.device_id, h.amount, h.status, h.reason,
+             h.created_at, h.resolved_at,
+             u.full_name, u.phone
+      FROM held_balances h
+      LEFT JOIN users u ON h.device_id = u.device_id
+      ORDER BY h.created_at DESC LIMIT 100
+    `);
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ADMIN — DISPUTES DETAIL
+app.get('/admin/api/disputes/detail', verifyAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT d.*, u.full_name AS reporter_name, u.phone AS reporter_phone
+      FROM disputes d
+      LEFT JOIN users u ON d.reporter_id = u.device_id
+      ORDER BY d.created_at DESC LIMIT 100
+    `);
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ADMIN — RESOLVE DISPUTE
+app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
+  const { disputeId, decision, adminNote } = req.body;
+  if (!disputeId || !decision)
+    return res.status(400).json({ error: 'disputeId dan decision wajib diisi' });
+  try {
+    await pool.query(
+      `UPDATE disputes SET status=$1, admin_note=$2, resolved_at=NOW() WHERE id=$3`,
+      [decision, adminNote || '', disputeId]
+    );
+    const d = await pool.query('SELECT tx_id FROM disputes WHERE id=$1', [disputeId]);
+    if (d.rows.length > 0) {
+      const s = decision === 'resolved_refund' ? 'refunded' : 'hangus';
+      await pool.query(
+        `UPDATE held_balances SET status=$1, resolved_at=NOW() WHERE tx_id=$2`,
+        [s, d.rows[0].tx_id]
+      );
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─────────────────────────────────────────────
+// TX SYNC — terima transaksi dari HP
+// ─────────────────────────────────────────────
+app.post('/tx/sync', async (req, res) => {
+  const { txId, senderId, receiverId, amount, signature, 
+          issuedAt, expiredAt, nonce, chainHash } = req.body;
+  
+  if (!txId || !senderId || !amount) {
+    return res.status(400).json({ error: 'Data tidak lengkap' });
+  }
+
+  try {
+    await pool.query(`
+      INSERT INTO transactions 
+        (tx_id, sender_id, receiver_id, amount, signature, 
+         issued_at, expired_at, nonce, chain_hash, status, synced_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'completed', NOW())
+      ON CONFLICT (tx_id) DO NOTHING
+    `, [txId, senderId, receiverId, amount, signature,
+        issuedAt, expiredAt, nonce, chainHash]);
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Sync error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
