@@ -20,6 +20,7 @@ ed25519.etc.sha512Sync = (...msgs) => {
   return Uint8Array.from(h.digest());
 };
 
+app.set('trust proxy', 1);
 const app  = express();
 const port = process.env.PORT || 3000;
 
@@ -1566,6 +1567,7 @@ app.post('/tx/sync', async (req, res) => {
 // START SERVER
 // ─────────────────────────────────────────────
 initDB().then(() => {
+  const port = process.env.PORT || 3000;
   app.listen(port, () => {
     console.log(`🚀 OFFLINK Server berjalan di port ${port}`);
   });
