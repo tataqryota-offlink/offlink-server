@@ -1536,34 +1536,6 @@ app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// TX SYNC — terima transaksi dari HP
-// ─────────────────────────────────────────────
-app.post('/tx/sync', async (req, res) => {
-  const { txId, senderId, receiverId, amount, signature, 
-          issuedAt, expiredAt, nonce, chainHash } = req.body;
-  
-  if (!txId || !senderId || !amount) {
-    return res.status(400).json({ error: 'Data tidak lengkap' });
-  }
-
-  try {
-    await pool.query(`
-      INSERT INTO transactions 
-        (tx_id, sender_id, receiver_id, amount, signature, 
-         issued_at, expired_at, nonce, chain_hash, status, synced_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'completed', NOW())
-      ON CONFLICT (tx_id) DO NOTHING
-    `, [txId, senderId, receiverId, amount, signature,
-        issuedAt, expiredAt, nonce, chainHash]);
-
-    res.json({ success: true });
-  } catch (e) {
-    console.error('Sync error:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ─────────────────────────────────────────────
 // START SERVER
 // ─────────────────────────────────────────────
 initDB().then(() => {
