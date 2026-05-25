@@ -455,8 +455,7 @@ async function doLogin() {
       body: JSON.stringify({username:u, password:p})
     });
     const d = await r.json();
-    if (d.success) {
-      token = d.token;
+    if (d.success) { token = d.token;
       localStorage.removeItem('offlink_admin_token');
       document.getElementById('loginPage').style.display = 'none';
       document.getElementById('mainPage').style.display = 'flex';
@@ -527,19 +526,20 @@ async function loadStats() {
 // ─── TRANSACTIONS ───
 async function loadTransactions() {
   document.getElementById('txTable').innerHTML = '<div class="loading">Memuat...</div>';
-  try {
-    const r = await fetch(`${API}/admin/transactions`, {headers: authHeader()});
-    const d = await r.json();
-    if (!d.transactions || d.transactions.length === 0) {
+  try {    
+    const rows = await apiFetch('/admin/api/transactions/detail');
+    if (!rows || rows.length === 0) {
       document.getElementById('txTable').innerHTML = '<div class="noData">Belum ada transaksi tersync</div>';
       return;
     }
-    let html = '<table><thead><tr><th>TX ID</th><th>Pengirim</th><th>Penerima</th><th>Nominal</th><th>Waktu</th></tr></thead><tbody>';
-    d.transactions.forEach(t => {
+    let html = '<table><thead><tr><th>TX ID</th><th>Pengirim</th><th>No HP</th><th>Penerima</th><th>No HP</th><th>Nominal</th><th>Waktu</th></tr></thead><tbody>';
+    rows.forEach(t => {
       html += `<tr>
         <td><span class="truncate" title="${t.tx_id}">${t.tx_id.substring(0,18)}...</span></td>
-        <td><span class="truncate" title="${t.sender_id}">${t.sender_id.substring(0,16)}...</span></td>
-        <td><span class="truncate" title="${t.receiver_id}">${t.receiver_id.substring(0,16)}...</span></td>
+        <td><div>${t.sender_name || '—'}</div><div style="font-size:10px;color:#94a3b8">${t.sender_id.substring(0,14)}...</div></td>
+        <td style="color:#7AABF0">${t.sender_phone || '—'}</td>
+        <td><div>${t.receiver_name || '—'}</div><div style="font-size:10px;color:#94a3b8">${t.receiver_id.substring(0,14)}...</div></td>
+        <td style="color:#7AABF0">${t.receiver_phone || '—'}</td>
         <td>${fmtRp(t.amount)}</td>
         <td>${fmtDate(t.created_at)}</td>
       </tr>`;
@@ -1219,3 +1219,4 @@ async function resolveDispute(disputeId, decision) {
 </script>
 </body>
 </html>
+
