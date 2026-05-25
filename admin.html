@@ -457,6 +457,7 @@ async function doLogin() {
     const d = await r.json();
     if (d.success) {
       token = d.token;
+      localStorage.setItem('offlink_admin_token', d.token);
       localStorage.removeItem('offlink_admin_token');
       document.getElementById('loginPage').style.display = 'none';
       document.getElementById('mainPage').style.display = 'flex';
