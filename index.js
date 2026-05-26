@@ -413,7 +413,7 @@ app.get('/device/balance/:deviceId', async (req, res) => {
 // 4. Simpan transaksi
 app.post('/tx/sync', txLimiter, async (req, res) => {
   const { txId, senderId, receiverId, amount, nonce, hash } = req.body;
-  console.log('DEBUG /tx/sync body:', JSON.stringify({ txId, senderId, receiverId, amount, nonce, hash, amountType: typeof amount, nonceType: typeof nonce }));
+  console.log('DEBUG sync:', JSON.stringify({txId, amount, nonce, amountType: typeof amount, nonceType: typeof nonce}));
   if (!txId || !senderId || !receiverId || !amount || !nonce || !hash)
     return res.status(400).json({ error: 'Semua field wajib diisi' });
 
