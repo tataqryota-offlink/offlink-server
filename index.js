@@ -260,6 +260,21 @@ async function initDB() {
         ADD COLUMN IF NOT EXISTS flow_status TEXT DEFAULT 'synced',
         ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
     `);
+    
+    await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_transactions_sender    ON transactions(sender_id);
+    CREATE INDEX IF NOT EXISTS idx_transactions_receiver  ON transactions(receiver_id);
+    CREATE INDEX IF NOT EXISTS idx_transactions_created   ON transactions(created_at);
+    CREATE INDEX IF NOT EXISTS idx_held_balances_device   ON held_balances(device_id);
+    CREATE INDEX IF NOT EXISTS idx_held_balances_status   ON held_balances(status);
+    CREATE INDEX IF NOT EXISTS idx_tx_events_tx_id        ON tx_events(tx_id);
+    CREATE INDEX IF NOT EXISTS idx_tx_events_device       ON tx_events(device_id);
+    CREATE INDEX IF NOT EXISTS idx_disputes_reporter      ON disputes(reporter_id);
+    CREATE INDEX IF NOT EXISTS idx_disputes_status        ON disputes(status);
+    CREATE INDEX IF NOT EXISTS idx_dispute_messages_dispute ON dispute_messages(dispute_id);
+    CREATE INDEX IF NOT EXISTS idx_aml_alerts_device      ON aml_alerts(device_id);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_created     ON audit_logs(created_at);
+  `);
   console.log('✅ Database tables ready');
 }
 
