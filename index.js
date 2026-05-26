@@ -107,7 +107,7 @@ function verifyAdmin(req, res, next) {
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL
-    ? { rejectUnauthorized: false }
+    ? { rejectUnauthorized: process.env.DB_SSL_VERIFY === 'true' }
     : false,
 });
 
@@ -260,7 +260,7 @@ async function initDB() {
         ADD COLUMN IF NOT EXISTS flow_status TEXT DEFAULT 'synced',
         ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
     `);
-    
+
     await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_transactions_sender    ON transactions(sender_id);
     CREATE INDEX IF NOT EXISTS idx_transactions_receiver  ON transactions(receiver_id);
