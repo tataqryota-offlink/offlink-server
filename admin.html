@@ -712,12 +712,11 @@ fetch('/admin/stats', { credentials: 'include' })
 // HELPER: apiFetch
 // ══════════════════════════════════════════
 async function apiFetch(url, method = 'GET', body = null) {
-  const token = localStorage.getItem('offlink_admin_token');
   const opts = {
     method,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token
     }
   };
   if (body) opts.body = JSON.stringify(body);
