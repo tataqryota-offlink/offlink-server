@@ -327,21 +327,17 @@ app.post('/nonce/verify', nonceLimiter, async (req, res) => {
     return res.status(400).json({ error: 'deviceId dan nonce wajib diisi' });
   try {
     const result = await pool.query(
-      'SELECT last_nonce FROM nonces WHERE device_id = $1',
-      [deviceId]
-    );
-    if (result.rows.length > 0) {
-      const lastNonce = result.rows[0].last_nonce;
-      if (nonce <= lastNonce)
-        return res.status(409).json({ error: 'Nonce sudah dipakai — double spend terdeteksi' });
-    }
-    await pool.query(
-      `INSERT INTO nonces (device_id, last_nonce, updated_at)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (device_id) DO UPDATE SET last_nonce = $2, updated_at = NOW()`,
-      [deviceId, nonce]
-    );
-    res.json({ success: true, message: 'Nonce valid' });
+  `INSERT INTO nonces (device_id, last_nonce, updated_at)
+   VALUES ($1, $2, NOW())
+   ON CONFLICT (device_id) DO UPDATE
+   SET last_nonce = $2, updated_at = NOW()
+   WHERE nonces.last_nonce < $2
+   RETURNING last_nonce`,
+  [deviceId, nonce]
+);
+if (result.rows.length === 0)
+  return res.status(409).json({ error: 'Nonce sudah dipakai — double spend terdeteksi' });
+res.json({ success: true, message: 'Nonce valid' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -353,17 +349,17 @@ app.post('/tx/check', txLimiter, async (req, res) => {
   if (!txId)
     return res.status(400).json({ error: 'txId wajib diisi' });
   try {
-    const result = await pool.query(
-      'SELECT tx_id FROM used_tx_ids WHERE tx_id = $1',
-      [txId]
-    );
-    if (result.rows.length > 0)
-      return res.status(409).json({ error: 'Transaksi sudah pernah digunakan' });
-    await pool.query(
-      'INSERT INTO used_tx_ids (tx_id) VALUES ($1)',
-      [txId]
-    );
-    res.json({ success: true, message: 'TX ID valid' });
+    try {
+  await pool.query(
+    'INSERT INTO used_tx_ids (tx_id) VALUES ($1)',
+    [txId]
+  );
+  res.json({ success: true, message: 'TX ID valid' });
+} catch (e) {
+  if (e.code === '23505')
+    return res.status(409).json({ error: 'Transaksi sudah pernah digunakan' });
+  throw e;
+}
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
