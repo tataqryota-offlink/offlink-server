@@ -1066,7 +1066,7 @@ async function loadTxDetail() {
 // ══════════════════════════════════════════
 async function loadHeldBalances() {
   document.getElementById('heldTable').innerHTML = '<div class="loading">Memuat data...</div>';
-  const rows = await apiFetch('/admin/api/held-balances');
+  const rows = await fetch(`${API}/admin/api/held-balances`, {credentials:'include'}).then(r=>r.json()).catch(()=>null);
   if (!rows || rows.length === 0) {
     document.getElementById('heldTable').innerHTML = '<div class="loading">Tidak ada dana tertahan</div>';
     return;
