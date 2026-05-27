@@ -1217,6 +1217,39 @@ async function resolveDispute(disputeId, decision) {
     alert('Gagal: ' + (result ? result.error : 'koneksi error'));
   }
 }
+
+async function loadHeldBalances() {
+  document.getElementById('heldTable').innerHTML = '<div class="loading">Memuat data...</div>';
+  try {
+    const res = await fetch('/admin/api/held-balances', { credentials: 'include' });
+    const data = await res.json();
+    if (!data.length) {
+      document.getElementById('heldTable').innerHTML = '<div class="empty">Tidak ada dana tertahan</div>';
+      return;
+    }
+    let html = `<table class="dataTable"><thead><tr>
+      <th>TX ID</th><th>Device ID</th><th>Nama</th><th>Nominal</th><th>Status</th><th>Waktu</th>
+    </tr></thead><tbody>`;
+    data.forEach(h => {
+      const status = h.status === 'released' ? '✅ Released' : h.status === 'hangus' ? '❌ Hangus' : '🔒 Tertahan';
+      const nominal = 'Rp ' + Number(h.amount).toLocaleString('id-ID');
+      const waktu = new Date(h.created_at).toLocaleString('id-ID');
+      html += `<tr>
+        <td style="font-size:11px">${h.tx_id}</td>
+        <td style="font-size:11px">${h.device_id?.substring(0,20)}...</td>
+        <td>${h.full_name || '-'}</td>
+        <td><strong>${nominal}</strong></td>
+        <td>${status}</td>
+        <td>${waktu}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('heldTable').innerHTML = html;
+  } catch (e) {
+    document.getElementById('heldTable').innerHTML = '<div class="error">Gagal memuat data</div>';
+  }
+}
+
 </script>
 </body>
 </html>
