@@ -10,6 +10,15 @@ const helmet   = require('helmet');
 const path     = require('path');
 const { Pool } = require('pg');
 const rateLimit = require('express-rate-limit');
+const { RedisStore } = require('rate-limit-redis');
+const Redis = require('ioredis');
+
+const redisClient = new Redis({
+  host     : process.env.UPSTASH_REDIS_HOST,
+  port     : 6379,
+  password : process.env.UPSTASH_REDIS_TOKEN,
+  tls      : {},
+});
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
 const ed25519 = require('@noble/ed25519');
@@ -79,6 +88,7 @@ const globalLimiter = rateLimit({
   windowMs : 60 * 1000,
   max      : 100,
   message  : { error: 'Terlalu banyak request. Coba lagi dalam 1 menit.' },
+  store    : new RedisStore({ sendCommand: (...args) => redisClient.call(...args) }),
 });
 app.use(globalLimiter);
 
@@ -86,18 +96,21 @@ const txLimiter = rateLimit({
   windowMs : 60 * 1000,
   max      : 30,
   message  : { error: 'Terlalu banyak percobaan scan. Coba lagi dalam 1 menit.' },
+  store    : new RedisStore({ sendCommand: (...args) => redisClient.call(...args) }),
 });
 
 const registerLimiter = rateLimit({
   windowMs : 60 * 60 * 1000,
   max      : 5,
   message  : { error: 'Terlalu banyak pendaftaran perangkat. Coba lagi dalam 1 jam.' },
+  store    : new RedisStore({ sendCommand: (...args) => redisClient.call(...args) }),
 });
 
 const nonceLimiter = rateLimit({
   windowMs : 60 * 1000,
   max      : 50,
   message  : { error: 'Terlalu banyak request nonce. Coba lagi dalam 1 menit.' },
+  store    : new RedisStore({ sendCommand: (...args) => redisClient.call(...args) }),
 });
 
 // ─────────────────────────────────────────────
