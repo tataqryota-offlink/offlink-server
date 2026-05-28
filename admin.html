@@ -792,7 +792,7 @@ async function loadKyc() {
               <button onclick="topupUser('${u.device_id}','${u.full_name || u.device_id.substring(0,12)}')"
                 style="background:#1d4ed8;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:4px;font-size:12px">
                 💰 Topup
-              </button>  
+              </button>                
             </td>
           </tr>
         `).join('')}
@@ -806,6 +806,21 @@ async function kycAction(deviceId, action) {
     : '/admin/api/users/kyc/reject';
   const result = await apiFetch(url, 'POST', { deviceId });
   if (result && result.success) {
+    loadKyc();
+  } else {
+    alert('Gagal: ' + (result ? result.error : 'koneksi error'));
+  }
+}
+
+async function topupUser(deviceId, nama) {
+  const nominal = prompt(`Topup saldo untuk ${nama}\nMasukkan nominal (contoh: 50000):`);
+  if (!nominal) return;
+  const amount = parseInt(nominal.replace(/[^0-9]/g, ''));
+  if (!amount || amount <= 0) { alert('Nominal tidak valid'); return; }
+  if (!confirm(`Tambah saldo Rp ${amount.toLocaleString('id-ID')} untuk ${nama}?`)) return;
+  const result = await apiFetch('/admin/api/users/topup', 'POST', { deviceId, amount });
+  if (result && result.success) {
+    alert(`✅ Berhasil topup Rp ${amount.toLocaleString('id-ID')} untuk ${nama}`);
     loadKyc();
   } else {
     alert('Gagal: ' + (result ? result.error : 'koneksi error'));
