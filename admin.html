@@ -924,7 +924,7 @@ async function loadAuditLog() {
   document.getElementById('auditTable').innerHTML = `
     <table class="dataTable">
       <thead>
-        <tr><th>ID</th><th>Admin</th><th>Aksi</th><th>Target</th><th>IP Address</th><th>Waktu</th></tr>
+        <tr><th>ID</th><th>Admin</th><th>Aksi</th><th>Target</th><th>Detail</th><th>IP Address</th><th>Waktu</th></tr>
       </thead>
       <tbody>
         ${rows.map(l => `
@@ -933,6 +933,7 @@ async function loadAuditLog() {
             <td>${l.admin_user}</td>
             <td>${l.action}</td>
             <td>${l.target || '—'}</td>
+            <td>${l.detail ? (l.detail.amount ? 'Rp '+Number(l.detail.amount).toLocaleString('id-ID') : JSON.stringify(l.detail)) : '—'}</td>
             <td>${l.ip_address || '—'}</td>
             <td style="font-size:12px">${new Date(l.created_at).toLocaleString('id-ID')}</td>
           </tr>
