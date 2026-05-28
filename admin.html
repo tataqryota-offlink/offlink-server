@@ -813,7 +813,7 @@ async function kycAction(deviceId, action) {
 }
 
 async function topupUser(deviceId, nama) {
-  const nominal = prompt(`Topup saldo untuk ${nama}\nMasukkan nominal (contoh: 50000):`);
+  const nominal = prompt(`Topup saldo untuk ${nama}\nMasukkan nominal dalam Rupiah:\nContoh: 50.000 atau 1.000.000`);
   if (!nominal) return;
   const amount = parseInt(nominal.replace(/[^0-9]/g, ''));
   if (!amount || amount <= 0) { alert('Nominal tidak valid'); return; }
