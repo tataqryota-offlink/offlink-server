@@ -66,7 +66,7 @@ app.use(helmet({
 app.use(cors({
   origin: function (origin, callback) {
     const allowed = [
-      process.env.CORS_ORIGIN || 'https://offlink-server-production.up.railway.app',
+      process.env.CORS_ORIGIN || 'https://offlink.id',
     ];
     // Izinkan request tanpa origin (mobile app, Postman)
     if (!origin || allowed.indexOf(origin) !== -1) {
