@@ -763,6 +763,25 @@ app.post('/admin/users/unblock', verifyAdmin, async (req, res) => {
 // ─────────────────────────────────────────────
 // ADMIN — KYC & PENGGUNA
 // ─────────────────────────────────────────────
+
+app.get('/admin/api/users/detail/:deviceId', verifyAdmin, async (req, res) => {
+  const { deviceId } = req.params;
+  try {
+    const [user, sent, received, held] = await Promise.all([
+      pool.query(`SELECT u.*, d.balance, d.held_balance FROM users u JOIN devices d ON d.device_id = u.device_id WHERE u.device_id = $1`, [deviceId]),
+      pool.query(`SELECT * FROM transactions WHERE sender_id = $1 ORDER BY created_at DESC LIMIT 50`, [deviceId]),
+      pool.query(`SELECT * FROM transactions WHERE receiver_id = $1 ORDER BY created_at DESC LIMIT 50`, [deviceId]),
+      pool.query(`SELECT * FROM held_balances WHERE device_id = $1 ORDER BY created_at DESC LIMIT 30`, [deviceId]),
+    ]);
+    res.json({
+      user: user.rows[0] || null,
+      sentTransactions: sent.rows,
+      receivedTransactions: received.rows,
+      heldBalances: held.rows,
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/admin/api/users/list', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1508,6 +1527,58 @@ app.post('/admin/api/dispute/reply', verifyAdmin, async (req, res) => {
       [disputeId]
     );
     res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Detail transaksi untuk dispute
+app.get('/admin/api/dispute/tx-detail/:disputeId', verifyAdmin, async (req, res) => {
+  try {
+    const { disputeId } = req.params;
+
+    // Data dispute
+    const dispute = await pool.query(
+      `SELECT d.*, u.full_name, u.phone 
+       FROM disputes d
+       LEFT JOIN users u ON u.device_id = d.reporter_id
+       WHERE d.id = $1`, [disputeId]
+    );
+    if (!dispute.rows[0]) return res.status(404).json({ error: 'Dispute tidak ditemukan' });
+    const disp = dispute.rows[0];
+
+    // Data transaksi
+    const tx = await pool.query(
+      `SELECT * FROM transactions WHERE tx_id = $1`, [disp.tx_id]
+    );
+
+    // Data held_balances
+    const held = await pool.query(
+      `SELECT * FROM held_balances WHERE tx_id = $1`, [disp.tx_id]
+    );
+
+    // TX Events
+    const events = await pool.query(
+      `SELECT * FROM tx_events WHERE tx_id = $1 ORDER BY created_at ASC`, [disp.tx_id]
+    );
+
+    // Saldo sender dan receiver
+    let senderBalance = null, receiverBalance = null;
+    if (tx.rows[0]) {
+      const sb = await pool.query(`SELECT balance, held_balance FROM devices WHERE device_id=$1`, [tx.rows[0].sender_id]);
+      const rb = await pool.query(`SELECT balance, held_balance FROM devices WHERE device_id=$1`, [tx.rows[0].receiver_id]);
+      senderBalance = sb.rows[0] || null;
+      receiverBalance = rb.rows[0] || null;
+    }
+
+    res.json({
+      dispute: disp,
+      transaction: tx.rows[0] || null,
+      heldBalance: held.rows[0] || null,
+      txEvents: events.rows,
+      senderBalance,
+      receiverBalance,
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

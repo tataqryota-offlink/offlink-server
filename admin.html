@@ -416,6 +416,28 @@
   </div>
 </div>
 
+<!-- MODAL CEK TX DISPUTE -->
+<div class="modal" id="modalCekTx">
+  <div class="modalBox" style="max-width:520px">
+    <h3>🔍 Detail Transaksi Dispute</h3>
+    <div id="cekTxBody"></div>
+    <div class="modalActions" style="margin-top:16px">
+      <button class="btnCancel" onclick="closeModal('modalCekTx')">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETAIL USER -->
+<div class="modal" id="modalUserDetail">
+  <div class="modalBox" style="max-width:620px">
+    <h3>👤 Histori User: <span id="userDetailName"></span></h3>
+    <div id="userDetailBody"></div>
+    <div class="modalActions" style="margin-top:16px">
+      <button class="btnCancel" onclick="closeModal('modalUserDetail')">Tutup</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL SELESAIKAN DISPUTE -->
 <div class="modal" id="modalDispute">
   <div class="modalBox">
@@ -631,15 +653,92 @@ async function loadDisputes() {
         <td><span class="badge ${dp.status}">${dp.status}</span></td>
         <td style="color:#7AABF0;font-size:12px">${dp.admin_note||'-'}</td>
         <td>${fmtDate(dp.created_at)}</td>
-        <td>${dp.status==='pending'
-          ? `<button class="btnSm btnResolve" onclick="openResolve(${dp.id})">Selesaikan</button>`
-          : '—'
-        }</td>
+        <td>
+          <button class="btnSm" style="background:#0e4f8f" onclick="cekTx(${dp.id})">🔍 Cek TX</button>
+          ${dp.status==='pending'
+            ? `<br><button class="btnSm btnResolve" style="margin-top:4px" onclick="openResolve(${dp.id})">Selesaikan</button>`
+            : ''
+          }
+        </td>
       </tr>`;
     });
     html += '</tbody></table>';
     document.getElementById('dispTable').innerHTML = html;
   } catch(e) { document.getElementById('dispTable').innerHTML = '<div class="noData">Gagal memuat data</div>'; }
+}
+
+async function cekTx(disputeId) {
+  document.getElementById('cekTxBody').innerHTML = '<div class="loading">Memuat data...</div>';
+  document.getElementById('modalCekTx').classList.add('show');
+  try {
+    const r = await fetch(`${API}/admin/api/dispute/tx-detail/${disputeId}`, {headers: authHeader()});
+    const d = await r.json();
+    const tx = d.transaction;
+    const held = d.heldBalance;
+    const events = d.txEvents || [];
+    const disp = d.dispute;
+
+    let html = `
+      <div style="margin-bottom:12px">
+        <div style="color:#7AABF0;font-size:11px;margin-bottom:4px">🎫 TIKET</div>
+        <div style="color:#fff;font-weight:bold">${disp.ticket_number || 'ADU-'+disp.id}</div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="color:#7AABF0;font-size:11px;margin-bottom:4px">📋 DESKRIPSI PELAPOR</div>
+        <div style="color:#fff;font-size:13px">${disp.description || '-'}</div>
+      </div>`;
+
+    if (!tx) {
+      html += `<div style="color:#f87171;padding:12px;background:rgba(248,113,113,0.1);border-radius:8px">
+        ⚠️ TX ID tidak ditemukan di server — HP penerima belum pernah sync ke server
+      </div>`;
+    } else {
+      const saldo = d.senderBalance;
+      const rsaldo = d.receiverBalance;
+      html += `
+        <div style="background:#0d2137;border-radius:10px;padding:14px;margin-bottom:10px">
+          <div style="color:#7AABF0;font-size:11px;margin-bottom:8px">💰 DATA TRANSAKSI</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+            <div><span style="color:#7AABF0">Nominal:</span><br><span style="color:#4ade80;font-weight:bold">${fmtRp(tx.amount)}</span></div>
+            <div><span style="color:#7AABF0">Status TX:</span><br><span style="color:#fff">${tx.status}</span></div>
+            <div><span style="color:#7AABF0">Pengirim:</span><br><span style="color:#fff" title="${tx.sender_id}">${tx.sender_id.substring(0,20)}...</span></div>
+            <div><span style="color:#7AABF0">Penerima:</span><br><span style="color:#fff" title="${tx.receiver_id}">${tx.receiver_id.substring(0,20)}...</span></div>
+            <div><span style="color:#7AABF0">Saldo Pengirim:</span><br><span style="color:#fff">${saldo ? fmtRp(saldo.balance) : '❌ Belum sync'}</span></div>
+            <div><span style="color:#7AABF0">Saldo Penerima:</span><br><span style="color:#fff">${rsaldo ? fmtRp(rsaldo.balance) : '❌ Belum sync'}</span></div>
+          </div>
+        </div>`;
+
+      if (held) {
+        html += `
+          <div style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.3);border-radius:10px;padding:12px;margin-bottom:10px;font-size:12px">
+            🔒 <span style="color:#fb923c;font-weight:bold">Dana Tertahan: ${fmtRp(held.amount)}</span>
+            <span style="color:#7AABF0;margin-left:8px">Status: ${held.status}</span>
+          </div>`;
+      } else {
+        html += `<div style="background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);border-radius:10px;padding:12px;margin-bottom:10px;font-size:12px">
+          ✅ <span style="color:#4ade80">Tidak ada dana tertahan di server untuk TX ini</span>
+        </div>`;
+      }
+    }
+
+    if (events.length > 0) {
+      html += `<div style="color:#7AABF0;font-size:11px;margin-bottom:6px">📜 RIWAYAT EVENT (${events.length})</div>`;
+      html += `<div style="max-height:150px;overflow-y:auto">`;
+      events.forEach(ev => {
+        html += `<div style="font-size:11px;color:#9ca3af;padding:4px 0;border-bottom:1px solid #1e3a5f">
+          ${fmtDate(ev.created_at)} — <span style="color:#7AABF0">${ev.event_type}</span>
+          — ${ev.device_id.substring(0,16)}...
+        </div>`;
+      });
+      html += `</div>`;
+    } else {
+      html += `<div style="font-size:12px;color:#6b7280">Tidak ada event tercatat untuk TX ini</div>`;
+    }
+
+    document.getElementById('cekTxBody').innerHTML = html;
+  } catch(e) {
+    document.getElementById('cekTxBody').innerHTML = '<div style="color:#f87171">Gagal memuat data transaksi</div>';
+  }
 }
 
 function openResolve(id) {
@@ -792,12 +891,83 @@ async function loadKyc() {
               <button onclick="topupUser('${u.device_id}','${u.full_name || u.device_id.substring(0,12)}')"
                 style="background:#1d4ed8;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:4px;font-size:12px">
                 💰 Topup
+              <button onclick="viewUserDetail('${u.device_id}','${u.full_name || '—'}')"
+                style="background:#0e4f8f;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:4px;font-size:12px">
+                🔍 Histori
               </button>                
             </td>
           </tr>
         `).join('')}
       </tbody>
     </table>`;
+}
+
+async function viewUserDetail(deviceId, nama) {
+  document.getElementById('userDetailName').textContent = nama;
+  document.getElementById('userDetailBody').innerHTML = '<div class="loading">Memuat histori...</div>';
+  document.getElementById('modalUserDetail').classList.add('show');
+  try {
+    const d = await apiFetch(`/admin/api/users/detail/${encodeURIComponent(deviceId)}`);
+    if (!d) throw new Error('Gagal');
+
+    const allTx = [
+      ...d.sentTransactions.map(t => ({...t, arah: 'KIRIM'})),
+      ...d.receivedTransactions.map(t => ({...t, arah: 'TERIMA'})),
+    ].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+    let html = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+        <div style="background:#0d2137;border-radius:8px;padding:10px;text-align:center">
+          <div style="color:#7AABF0;font-size:11px">Saldo</div>
+          <div style="color:#4ade80;font-weight:bold">${fmtRp(d.user?.balance||0)}</div>
+        </div>
+        <div style="background:#0d2137;border-radius:8px;padding:10px;text-align:center">
+          <div style="color:#7AABF0;font-size:11px">Dana Tertahan</div>
+          <div style="color:#fb923c;font-weight:bold">${fmtRp(d.user?.held_balance||0)}</div>
+        </div>
+        <div style="background:#0d2137;border-radius:8px;padding:10px;text-align:center">
+          <div style="color:#7AABF0;font-size:11px">No HP</div>
+          <div style="color:#fff;font-size:12px">${d.user?.phone||'—'}</div>
+        </div>
+      </div>`;
+
+    if (allTx.length === 0) {
+      html += '<div style="color:#6b7280;text-align:center;padding:20px">Belum ada transaksi</div>';
+    } else {
+      html += `<div style="color:#7AABF0;font-size:11px;margin-bottom:6px">📋 HISTORI TRANSAKSI (${allTx.length})</div>`;
+      html += '<div style="max-height:300px;overflow-y:auto">';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+      html += '<thead><tr style="color:#7AABF0;border-bottom:1px solid #1e3a5f"><th style="padding:6px;text-align:left">TX ID</th><th>Arah</th><th>Nominal</th><th>Lawan</th><th>Waktu</th></tr></thead><tbody>';
+      allTx.forEach(t => {
+        const lawan = t.arah === 'KIRIM' ? t.receiver_id : t.sender_id;
+        html += `<tr style="border-bottom:1px solid #0d2137">
+          <td style="padding:5px;color:#9ca3af" title="${t.tx_id}">${t.tx_id.substring(0,18)}...</td>
+          <td style="text-align:center"><span style="color:${t.arah==='KIRIM'?'#f87171':'#4ade80'}">${t.arah==='KIRIM'?'↑ Kirim':'↓ Terima'}</span></td>
+          <td style="text-align:right;color:#fff">${fmtRp(t.amount)}</td>
+          <td style="color:#9ca3af" title="${lawan}">${lawan.substring(0,14)}...</td>
+          <td style="color:#6b7280">${new Date(t.created_at).toLocaleDateString('id-ID')}</td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+    }
+
+    if (d.heldBalances.length > 0) {
+      html += `<div style="color:#fb923c;font-size:11px;margin:12px 0 6px">🔒 DANA TERTAHAN (${d.heldBalances.length})</div>`;
+      html += '<div style="max-height:150px;overflow-y:auto">';
+      d.heldBalances.forEach(h => {
+        html += `<div style="font-size:12px;padding:5px 0;border-bottom:1px solid #0d2137;display:flex;justify-content:space-between">
+          <span style="color:#9ca3af" title="${h.tx_id}">${h.tx_id.substring(0,22)}...</span>
+          <span style="color:#fb923c">${fmtRp(h.amount)}</span>
+          <span style="color:#6b7280">${h.status}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    document.getElementById('userDetailBody').innerHTML = html;
+  } catch(e) {
+    document.getElementById('userDetailBody').innerHTML = '<div style="color:#f87171">Gagal memuat data</div>';
+  }
 }
 
 async function kycAction(deviceId, action) {
