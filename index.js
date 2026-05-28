@@ -837,6 +837,18 @@ app.post('/admin/api/users/kyc/reject', verifyAdmin, async (req, res) => {
   }
 });
 
+app.post('/admin/api/users/topup', verifyAdmin, async (req, res) => {
+  const { deviceId, amount } = req.body;
+  if (!deviceId || !amount || amount <= 0) return res.status(400).json({ error: 'Input tidak valid' });
+  if (amount > 10000000) return res.status(400).json({ error: 'Maksimal Rp 10.000.000' });
+  try {
+    await pool.query(`UPDATE devices SET balance = balance + $1 WHERE device_id = $2`, [amount, deviceId]);
+    await pool.query(`INSERT INTO audit_logs (admin_user, action, target, detail, ip_address) VALUES ($1,'TOPUP_MANUAL',$2,$3,$4)`,
+      ['admin', deviceId, JSON.stringify({ amount }), req.ip]);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─────────────────────────────────────────────
 // ADMIN — AML & ANOMALI
 // ─────────────────────────────────────────────

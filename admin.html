@@ -789,6 +789,10 @@ async function loadKyc() {
                 style="background:#7f1d1d;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">
                 ❌ Reject
               </button>
+              <button onclick="topupUser('${u.device_id}','${u.full_name || u.device_id.substring(0,12)}')"
+                style="background:#1d4ed8;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:4px;font-size:12px">
+                💰 Topup
+              </button>  
             </td>
           </tr>
         `).join('')}
