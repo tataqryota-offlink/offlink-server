@@ -14,6 +14,22 @@ const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
 const ed25519 = require('@noble/ed25519');
 const crypto = require('crypto');
+
+// ─────────────────────────────────────────────
+// LOGGER — Winston structured logging
+// ─────────────────────────────────────────────
+const winston = require('winston');
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console(),
+  ],
+});
+
 ed25519.etc.sha512Sync = (...msgs) => {
   const h = crypto.createHash('sha512');
   msgs.forEach(m => h.update(m));
@@ -275,7 +291,7 @@ async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_aml_alerts_device      ON aml_alerts(device_id);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_created     ON audit_logs(created_at);
   `);
-  console.log('✅ Database tables ready');
+  logger.info('✅ Database tables ready');
 }
 
 // ─────────────────────────────────────────────
@@ -409,7 +425,7 @@ app.get('/device/balance/:deviceId', async (req, res) => {
 // 4. Simpan transaksi
 app.post('/tx/sync', txLimiter, async (req, res) => {
   const { txId, senderId, receiverId, amount, nonce, hash } = req.body;
-  console.log('DEBUG sync:', JSON.stringify({txId, amount, nonce, amountType: typeof amount, nonceType: typeof nonce}));
+  logger.info('DEBUG sync:', JSON.stringify({txId, amount, nonce, amountType: typeof amount, nonceType: typeof nonce}));
   if (!txId || !senderId || !receiverId || !amount || !nonce || !hash)
     return res.status(400).json({ error: 'Semua field wajib diisi' });
 
@@ -1136,7 +1152,7 @@ async function checkAml(txId, senderId, receiverId, amount) {
       );
     }
   } catch (e) {
-    console.error('AML check error:', e.message);
+    logger.error('AML check error:', e.message);
   }
 }
 
@@ -1543,7 +1559,7 @@ app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
 initDB().then(() => {
   const port = process.env.PORT || 3000;
   app.listen(port, () => {
-    console.log(`🚀 OFFLINK Server berjalan di port ${port}`);
+    logger.info(`🚀 OFFLINK Server berjalan di port ${port}`);
   });
 });
 
