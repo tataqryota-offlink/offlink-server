@@ -1417,6 +1417,26 @@ async function resolveDispute(disputeId, decision) {
     alert('Gagal: ' + (result ? result.error : 'koneksi error'));
   }
 }
+
+// ── Auto-refresh setiap 15 detik ──
+window._activeSection = 'overview';
+const _origShow = showSection;
+showSection = function(name) {
+  _origShow(name);
+  window._activeSection = name;
+};
+
+const _loaders = {
+  overview: loadStats, transactions: loadTransactions,
+  devices: loadDevices, disputes: loadDisputes,
+  fees: loadFees, kyc: loadKyc, aml: loadAml,
+  reconciliation: loadReconciliation, heldbalances: loadHeldBalances,
+};
+
+setInterval(() => {
+  const fn = _loaders[window._activeSection];
+  if (fn) fn();
+}, 15000);
 </script>
 </body>
 </html>
