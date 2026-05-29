@@ -645,10 +645,13 @@ app.get('/admin/devices', verifyAdmin, async (req, res) => {
       SELECT d.device_id, d.public_key, d.created_at,
              COALESCE(ds.status, 'active') as status,
              COALESCE(ds.reason, '') as reason,
+             COALESCE(u.full_name, '—') as full_name,
+             COALESCE(u.phone, '—') as phone,
              (SELECT COUNT(*) FROM transactions
               WHERE sender_id = d.device_id OR receiver_id = d.device_id) as tx_count
       FROM devices d
       LEFT JOIN device_status ds ON d.device_id = ds.device_id
+      LEFT JOIN users u ON d.device_id = u.device_id
       ORDER BY d.created_at DESC
     `);
     res.json({ success: true, devices: result.rows });
