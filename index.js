@@ -665,7 +665,10 @@ app.get('/admin/stats', verifyAdmin, async (req, res) => {
 app.get('/admin/transactions', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM transactions ORDER BY created_at DESC LIMIT 100'
+      `SELECT t.*, d.last_seen_at
+       FROM transactions t
+       LEFT JOIN devices d ON t.sender_id = d.device_id
+       ORDER BY t.created_at DESC LIMIT 100`
     );
     res.json({ success: true, transactions: result.rows });
   } catch (e) { res.status(500).json({ error: e.message }); }

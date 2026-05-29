@@ -155,6 +155,12 @@
     <div class="section" id="sec-transactions">
       <div class="pageTitle">Transaksi</div>
       <div class="pageSubtitle">100 transaksi terakhir yang tersync ke server</div>
+      <div style="background:#0F1B2D;border:1px solid #2A5298;border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:12px;color:#7AABF0;line-height:1.8;">
+        <div style="font-weight:600;color:#4A9EFF;margin-bottom:6px;">ℹ️ Keterangan Status Device</div>
+        <div>🟢 <b style="color:#4ade80">Online</b> — Device aktif dalam 5 menit sebelum transaksi terjadi (ada koneksi internet saat TX)</div>
+        <div>⚫ <b style="color:#6b7280">Offline</b> — Device tidak aktif &gt;5 menit — transaksi dibuat saat offline, baru tersync belakangan</div>
+        <div style="margin-top:6px;color:#4A9EFF;">— Kolom ini membuktikan transaksi Offlink berjalan tanpa internet.</div>
+      </div>
       <div class="tableWrap">
         <div class="tableHeader">
           <h3>Daftar Transaksi</h3>
@@ -557,7 +563,7 @@ async function loadTransactions() {
       document.getElementById('txTable').innerHTML = '<div class="noData">Belum ada transaksi tersync</div>';
       return;
     }
-    let html = '<table><thead><tr><th>TX ID</th><th>Pengirim</th><th>Penerima</th><th>Nominal</th><th>Waktu</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>TX ID</th><th>Pengirim</th><th>Penerima</th><th>Nominal</th><th>Waktu</th><th>Status Device</th></tr></thead><tbody>';
     d.transactions.forEach(t => {
       html += `<tr>
         <td><span class="truncate" title="${t.tx_id}">${t.tx_id.substring(0,18)}...</span></td>
@@ -565,6 +571,12 @@ async function loadTransactions() {
         <td><span class="truncate" title="${t.receiver_id}">${t.receiver_id.substring(0,16)}...</span></td>
         <td>${fmtRp(t.amount)}</td>
         <td>${fmtDate(t.created_at)}</td>
+        <td style="font-size:11px">${(() => {
+          if (!t.last_seen_at) return '<span style="color:#7AABF0">—</span>';
+          const diff = Math.floor((new Date(t.created_at) - new Date(t.last_seen_at)) / 1000);
+          if (Math.abs(diff) < 300) return '<span style="color:#4ade80">🟢 Online</span>';
+          return '<span style="color:#6b7280">⚫ Offline</span>';
+        })()}</td>
       </tr>`;
     });
     html += '</tbody></table>';
