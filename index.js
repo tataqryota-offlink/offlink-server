@@ -482,18 +482,43 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
 
     // Saldo dikelola lokal di HP — server hanya catat transaksi
 
-    // Simpan transaksi
-    await pool.query(
-      `INSERT INTO transactions (tx_id, sender_id, receiver_id, amount, nonce, hash)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (tx_id) DO NOTHING`,
-      [txId, senderId, receiverId, amount, nonce, hash]
-    );
-    // Tandai txId sudah dipakai
-    await pool.query(
-      'INSERT INTO used_tx_ids (tx_id) VALUES ($1) ON CONFLICT DO NOTHING',
-      [txId]
-    );
+    // Simpan transaksi + update saldo dalam satu atomic block
+    await pool.query('BEGIN');
+    try {
+      await pool.query(
+        `INSERT INTO transactions (tx_id, sender_id, receiver_id, amount, nonce, hash)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (tx_id) DO NOTHING`,
+        [txId, senderId, receiverId, amount, nonce, hash]
+      );
+      await pool.query(
+        'INSERT INTO used_tx_ids (tx_id) VALUES ($1) ON CONFLICT DO NOTHING',
+        [txId]
+      );
+
+      // Kurangi saldo + release held balance pengirim
+      await pool.query(
+        `UPDATE devices 
+         SET balance      = GREATEST(0, balance - $1),
+             held_balance = GREATEST(0, held_balance - $1)
+         WHERE device_id = $2`,
+        [amount, senderId]
+      );
+
+      // Tambah saldo penerima
+      await pool.query(
+        `UPDATE devices 
+         SET balance = balance + $1
+         WHERE device_id = $2`,
+        [amount, receiverId]
+      );
+
+      await pool.query('COMMIT');
+    } catch (innerErr) {
+      await pool.query('ROLLBACK');
+      throw innerErr;
+    }
+
     // Cek AML otomatis
     checkAml(txId, senderId, receiverId, amount);
 
