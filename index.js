@@ -81,6 +81,18 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// Update last_seen_at setiap device aktif
+app.use((req, res, next) => {
+  const deviceId = req.body?.deviceId || req.query?.deviceId;
+  if (deviceId) {
+    pool.query(
+      `UPDATE devices SET last_seen_at = NOW() WHERE device_id = $1`,
+      [deviceId]
+    ).catch(() => {});
+  }
+  next();
+});
+
 // ─────────────────────────────────────────────
 // RATE LIMITING
 // ─────────────────────────────────────────────
