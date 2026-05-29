@@ -809,7 +809,7 @@ app.get('/admin/api/users/detail/:deviceId', verifyAdmin, async (req, res) => {
 app.get('/admin/api/users/list', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT d.device_id, d.balance, d.held_balance, d.created_at,
+      `SELECT d.device_id, d.balance, d.held_balance, d.created_at, d.last_seen_at,
               u.full_name, u.phone, u.kyc_status, u.kyc_verified_at
        FROM devices d
        LEFT JOIN users u ON d.device_id = u.device_id
