@@ -464,10 +464,6 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
     // Verifikasi signature - skip sementara untuk testing
     // TODO: aktifkan kembali setelah format signature dikonfirmasi
 
-    // Cek saldo mencukupi
-    if (deviceResult.rows[0].balance < amount)
-      return res.status(400).json({ error: 'Saldo tidak mencukupi' });
-
     // Cek device tidak diblokir
     const statusResult = await pool.query(
       'SELECT status FROM device_status WHERE device_id = $1',
@@ -484,15 +480,7 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
     if (usedResult.rows.length > 0)
       return res.status(409).json({ error: 'Transaksi sudah pernah diproses' });
 
-    // Kurangi saldo pengirim, tambah saldo penerima
-    await pool.query(
-      'UPDATE devices SET balance = balance - $1, held_balance = held_balance + $1 WHERE device_id = $2',
-      [amount, senderId]
-    );
-    await pool.query(
-      'UPDATE devices SET balance = balance + $1 WHERE device_id = $2',
-      [amount, receiverId]
-    );
+    // Saldo dikelola lokal di HP — server hanya catat transaksi
 
     // Simpan transaksi
     await pool.query(
