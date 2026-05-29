@@ -540,6 +540,25 @@ app.post('/dispute/create', async (req, res) => {
   if (!reporterId || !txId || !issueType)
     return res.status(400).json({ error: 'reporterId, txId, issueType wajib diisi' });
   try {
+    // Cek apakah dispute untuk TX ini sudah pernah dibuat dan sudah diselesaikan
+    const existing = await pool.query(
+      `SELECT id, status FROM disputes 
+       WHERE reporter_id = $1 AND tx_id = $2`,
+      [reporterId, txId]
+    );
+    if (existing.rows.length > 0) {
+      const status = existing.rows[0].status;
+      if (status === 'resolved' || status === 'rejected') {
+        return res.status(409).json({ 
+          error: 'Laporan untuk transaksi ini sudah pernah diselesaikan dan tidak bisa dilaporkan ulang' 
+        });
+      }
+      if (status === 'pending') {
+        return res.status(409).json({ 
+          error: 'Laporan untuk transaksi ini sudah ada dan sedang diproses admin' 
+        });
+      }
+    }
     await pool.query(
       `INSERT INTO disputes (reporter_id, tx_id, issue_type, description)
        VALUES ($1, $2, $3, $4)`,
