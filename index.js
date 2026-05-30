@@ -398,6 +398,11 @@ app.post('/device/fingerprint', async (req, res) => {
        WHERE device_id = $4`,
       [fpHash, deviceModel || null, manufacturer || null, deviceId]
     );
+    // Kalau device belum ada, tunggu dan coba sekali lagi
+    const check = await pool.query(`SELECT fp_hash FROM devices WHERE device_id = $1`, [deviceId]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Device belum terdaftar' });
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
