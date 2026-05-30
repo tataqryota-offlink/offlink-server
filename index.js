@@ -861,7 +861,8 @@ app.get('/admin/api/users/list', verifyAdmin, async (req, res) => {
       `SELECT d.device_id, d.balance, d.held_balance, d.created_at, d.last_seen_at,
               u.full_name, u.phone, u.kyc_status, u.kyc_verified_at
        FROM devices d
-       LEFT JOIN users u ON d.device_id = u.device_id
+       INNER JOIN users u ON d.device_id = u.device_id
+       WHERE u.full_name IS NOT NULL AND u.full_name != ''
        ORDER BY d.created_at DESC`
     );
     res.json(result.rows);
