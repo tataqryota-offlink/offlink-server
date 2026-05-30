@@ -858,12 +858,7 @@ async function loadKyc() {
     document.getElementById('kycTable').innerHTML = '<div class="loading">Gagal memuat data</div>';
     return;
   }
-  const verified = rows.filter(x => x.kyc_status === 'verified').length;
-  const pending  = rows.filter(x => !x.kyc_status || x.kyc_status === 'unverified').length;
-  document.getElementById('kyc-total').textContent    = rows.length;
-  document.getElementById('kyc-verified').textContent = verified;
-  document.getElementById('kyc-pending').textContent  = pending;
-
+  
   const registered = rows.filter(r => r.full_name && r.full_name.trim() !== '' && r.full_name !== '—');
   document.getElementById('kyc-total').textContent    = registered.length;
   document.getElementById('kyc-verified').textContent = registered.filter(x => x.kyc_status === 'verified').length;
