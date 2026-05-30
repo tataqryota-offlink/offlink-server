@@ -594,11 +594,12 @@ async function loadDevices() {
       document.getElementById('devTable').innerHTML = '<div class="noData">Belum ada perangkat terdaftar</div>';
       return;
     }
-    let html = '<table><thead><tr><th>Device ID</th><th>Nama</th><th>Tx Count</th><th>Status</th><th>Alasan</th><th>Terdaftar</th><th>Aksi</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Device ID</th><th>Nama</th><th>Model HP</th><th>Tx Count</th><th>Status</th><th>Alasan</th><th>Terdaftar</th><th>Aksi</th></tr></thead><tbody>';
     d.devices.forEach(dev => {
       html += `<tr>
         <td><span class="truncate" title="${dev.device_id}">${dev.device_id.substring(0,20)}...</span></td>
         <td>${dev.full_name}</td>
+        <td style="font-size:12px;color:#7AABF0">${dev.manufacturer||'—'} ${dev.device_model||'—'}</td>
         <td style="text-align:center">${dev.tx_count}</td>
         <td><span class="badge ${dev.status}">${dev.status}</span></td>
         <td style="color:#7AABF0;font-size:12px">${dev.reason||'-'}</td>

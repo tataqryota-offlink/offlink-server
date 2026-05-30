@@ -726,6 +726,9 @@ app.get('/admin/devices', verifyAdmin, async (req, res) => {
              COALESCE(ds.reason, '') as reason,
              COALESCE(u.full_name, '—') as full_name,
              COALESCE(u.phone, '—') as phone,
+             COALESCE(d.device_model, '—') as device_model,
+             COALESCE(d.manufacturer, '—') as manufacturer,
+             COALESCE(d.fp_updated_at::text, '—') as fp_updated_at,
              (SELECT COUNT(*) FROM transactions
               WHERE sender_id = d.device_id OR receiver_id = d.device_id) as tx_count
       FROM devices d
