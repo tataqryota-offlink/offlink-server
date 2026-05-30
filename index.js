@@ -300,6 +300,12 @@ async function initDB() {
       ALTER TABLE transactions
         ADD COLUMN IF NOT EXISTS flow_status TEXT DEFAULT 'synced',
         ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
+
+      ALTER TABLE devices
+        ADD COLUMN IF NOT EXISTS fp_hash TEXT,
+        ADD COLUMN IF NOT EXISTS device_model TEXT,
+        ADD COLUMN IF NOT EXISTS manufacturer TEXT,
+        ADD COLUMN IF NOT EXISTS fp_updated_at TIMESTAMP;
     `);
 
     await pool.query(`
@@ -356,6 +362,43 @@ app.post('/device/register', registerLimiter, async (req, res) => {
       [deviceId, publicKey]
     );
     res.json({ success: true, message: 'Perangkat terdaftar' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 2b. Terima device fingerprint
+app.post('/device/fingerprint', async (req, res) => {
+  const secret = req.headers['x-device-secret'];
+  if (secret !== process.env.DEVICE_SECRET)
+    return res.status(401).json({ error: 'Akses tidak diizinkan' });
+  const { deviceId, fpHash, deviceModel, manufacturer } = req.body;
+  if (!deviceId || !fpHash)
+    return res.status(400).json({ error: 'deviceId dan fpHash wajib diisi' });
+  try {
+    // Ambil fingerprint lama
+    const existing = await pool.query(
+      `SELECT fp_hash FROM devices WHERE device_id = $1`,
+      [deviceId]
+    );
+    if (existing.rows.length > 0) {
+      const oldHash = existing.rows[0].fp_hash;
+      // Kalau hash berubah dan bukan pertama kali — catat anomali
+      if (oldHash && oldHash !== fpHash) {
+        await pool.query(
+          `INSERT INTO audit_logs (admin_user, action, target, detail, created_at)
+           VALUES ('SYSTEM', 'DEVICE_FINGERPRINT_CHANGED', $1, $2, NOW())`,
+          [deviceId, JSON.stringify({ oldHash, newHash: fpHash, deviceModel, manufacturer })]
+        );
+      }
+    }
+    // Simpan fingerprint baru
+    await pool.query(
+      `UPDATE devices SET fp_hash = $1, device_model = $2, manufacturer = $3, fp_updated_at = NOW()
+       WHERE device_id = $4`,
+      [fpHash, deviceModel || null, manufacturer || null, deviceId]
+    );
+    res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
