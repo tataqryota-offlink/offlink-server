@@ -864,10 +864,15 @@ async function loadKyc() {
   document.getElementById('kyc-verified').textContent = verified;
   document.getElementById('kyc-pending').textContent  = pending;
 
-  if (rows.length === 0) {
+  const registered = rows.filter(r => r.full_name && r.full_name.trim() !== '' && r.full_name !== '—');
+  document.getElementById('kyc-total').textContent    = registered.length;
+  document.getElementById('kyc-verified').textContent = registered.filter(x => x.kyc_status === 'verified').length;
+  document.getElementById('kyc-pending').textContent  = registered.filter(x => !x.kyc_status || x.kyc_status === 'unverified').length;
+  if (registered.length === 0) {
     document.getElementById('kycTable').innerHTML = '<div class="loading">Belum ada pengguna terdaftar</div>';
     return;
   }
+  rows = registered;
   document.getElementById('kycTable').innerHTML = `
     <table class="dataTable">
       <thead>
