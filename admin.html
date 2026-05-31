@@ -164,7 +164,8 @@
       <div class="tableWrap">
         <div class="tableHeader">
           <h3>Daftar Transaksi</h3>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input id="txSearch" type="text" placeholder="Cari TX ID, nama, nominal..." onkeyup="filterTxTable()" style="padding:6px 12px;border-radius:8px;background:#1a2740;color:white;border:1px solid #2a5298;font-size:13px;width:260px;">
             <button class="btnRefresh" onclick="loadTransactions()">🔄 Refresh</button>
             <button class="btnRefresh" style="background:#7c3aed;" onclick="exportPDF()">📄 Export PDF</button>
             <button class="btnRefresh" style="background:#166534;" onclick="exportCSV('transactions')">⬇️ Export CSV</button>
@@ -181,7 +182,8 @@
       <div class="tableWrap">
         <div class="tableHeader">
           <h3>Daftar Perangkat</h3>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input id="devSearch" type="text" placeholder="Cari nama, device ID, model..." onkeyup="filterDevTable()" style="padding:6px 12px;border-radius:8px;background:#1a2740;color:white;border:1px solid #2a5298;font-size:13px;width:260px;">
             <button class="btnRefresh" onclick="loadDevices()">🔄 Refresh</button>
             <button class="btnRefresh" style="background:#166534;" onclick="exportCSV('users')">⬇️ Export CSV</button>
           </div>
@@ -221,7 +223,13 @@
         <div class="statCard"><div class="statLabel">BELUM VERIFIKASI</div><div class="statValue" id="kyc-pending" style="color:#fbbf24">—</div></div>
       </div>
       <div class="tableWrap">
-        <div class="tableHeader"><h3>Daftar Pengguna</h3><button class="btnRefresh" onclick="loadKyc()">🔄 Refresh</button></div>
+        <div class="tableHeader">
+          <h3>Daftar Pengguna</h3>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input id="kycSearch" type="text" placeholder="Cari nama, no HP..." onkeyup="filterKycTable()" style="padding:6px 12px;border-radius:8px;background:#1a2740;color:white;border:1px solid #2a5298;font-size:13px;width:240px;">
+            <button class="btnRefresh" onclick="loadKyc()">🔄 Refresh</button>
+          </div>
+        </div>
         <div id="kycTable"><div class="loading">Memuat data...</div></div>
       </div>
     </div>
@@ -573,7 +581,7 @@ async function loadTransactions() {
     let html = '<table><thead><tr><th>TX ID</th><th>Pengirim</th><th>Penerima</th><th>Nominal</th><th>Waktu</th><th>Status Device</th></tr></thead><tbody>';
     d.transactions.forEach(t => {
       html += `<tr>
-        <td><span class="truncate" title="${t.tx_id}">${t.tx_id.substring(0,18)}...</span></td>
+        <td><span style="font-size:11px;word-break:break-all;">${t.tx_id}</span></td>
         <td><span class="truncate" title="${t.sender_id}">${t.sender_id.substring(0,16)}...</span></td>
         <td><span class="truncate" title="${t.receiver_id}">${t.receiver_id.substring(0,16)}...</span></td>
         <td>${fmtRp(t.amount)}</td>
@@ -1427,6 +1435,29 @@ async function sendAdminReply() {
   } else {
     alert('Gagal kirim pesan');
   }
+}
+function filterTxTable() {
+  const q = document.getElementById('txSearch').value.toLowerCase();
+  const rows = document.querySelectorAll('#txTable table tbody tr');
+  rows.forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function filterDevTable() {
+  const q = document.getElementById('devSearch').value.toLowerCase();
+  const rows = document.querySelectorAll('#devTable table tbody tr');
+  rows.forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function filterKycTable() {
+  const q = document.getElementById('kycSearch').value.toLowerCase();
+  const rows = document.querySelectorAll('#kycTable table tbody tr');
+  rows.forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+  });
 }
 
 async function resolveDispute(disputeId, decision) {
