@@ -617,7 +617,7 @@ async function loadDevices() {
     }
     registered.forEach(dev => {
       html += `<tr>
-        <td><span class="truncate" title="${dev.device_id}">${dev.device_id.substring(0,20)}...</span></td>
+        <td style="font-size:11px;word-break:break-all;max-width:180px;">${dev.device_id}</td>
         <td>${dev.full_name}</td>
         <td style="font-size:12px;color:#7AABF0">${dev.manufacturer||'—'} ${dev.device_model||'—'}</td>
         <td style="text-align:center">${dev.tx_count}</td>
@@ -680,8 +680,8 @@ async function loadDisputes() {
     let html = '<table><thead><tr><th>Pelapor</th><th>TX ID</th><th>Masalah</th><th>Deskripsi</th><th>Status</th><th>Catatan Admin</th><th>Waktu</th><th>Aksi</th></tr></thead><tbody>';
     d.disputes.forEach(dp => {
       html += `<tr>
-        <td><span class="truncate" title="${dp.reporter_id}">${dp.reporter_id.substring(0,16)}...</span></td>
-        <td><span class="truncate" title="${dp.tx_id}">${dp.tx_id.substring(0,16)}...</span></td>
+        <td style="font-size:11px;word-break:break-all;max-width:180px;">${dp.reporter_id}</td>
+        <td style="font-size:11px;word-break:break-all;">${dp.tx_id}</td>
         <td style="font-size:12px">${dp.issue_type}</td>
         <td style="color:#7AABF0;font-size:12px">${dp.description||'-'}</td>
         <td><span class="badge ${dp.status}">${dp.status}</span></td>
@@ -900,7 +900,7 @@ async function loadKyc() {
       <tbody>
         ${rows.map(u => `
           <tr>
-            <td style="font-size:11px">${u.device_id.substring(0,24)}...</td>
+            <td style="font-size:11px;word-break:break-all;max-width:180px;">${u.device_id}</td>
             <td>${u.full_name || '—'}</td>
             <td>${u.phone || '—'}</td>
             <td>Rp ${Number(u.balance || 0).toLocaleString('id-ID')}</td>
@@ -1316,7 +1316,7 @@ async function loadHeldBalances() {
       <tbody>
         ${rows.map(h => `
           <tr>
-            <td style="font-size:11px">${h.tx_id.substring(0,20)}...</td>
+            <td style="font-size:11px;word-break:break-all;">${h.tx_id}</td>
             <td>${h.full_name || '—'}</td>
             <td>${h.phone || '—'}</td>
             <td>Rp ${Number(h.amount).toLocaleString('id-ID')}</td>
@@ -1356,7 +1356,7 @@ async function loadDisputeDetail() {
     const statusColor = d.status === 'resolved_refund' ? '#4ade80' : d.status === 'hangus' ? '#f87171' : d.status === 'open' ? '#fbbf24' : '#94a3b8';
     const statusLabel = d.status === 'resolved_refund' ? '✅ Direfund' : d.status === 'hangus' ? '❌ Hangus' : d.status === 'open' ? '⏳ Menunggu' : d.status;
     const deadline = d.deadline_at ? new Date(d.deadline_at).toLocaleDateString('id-ID') : '—';
-    const txShort = d.tx_id ? d.tx_id.substring(0,16)+'...' : '—';
+    const txShort = d.tx_id || '—';
     const ticketNum = d.ticket_number || ('ADU-' + d.id);
     const chatBtn = '<button onclick="openDisputeChat(' + d.id + ',\'' + ticketNum + '\')" style="background:#1e3a5f;color:#7aabf0;border:1px solid #2a5298;padding:4px 8px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:11px;display:inline-block;margin-bottom:4px">💬 Pesan</button>';
     const aksi = chatBtn + (d.status === 'open'
@@ -1365,7 +1365,7 @@ async function loadDisputeDetail() {
     tbody += '<tr>';
     tbody += '<td>' + d.id + '</td>';
     tbody += '<td><div>' + (d.reporter_name || '—') + '</div><div style="font-size:10px;color:#94a3b8">' + (d.reporter_phone || '') + '</div></td>';
-    tbody += '<td style="font-size:11px">' + txShort + '</td>';
+    tbody += '<td style="font-size:11px;word-break:break-all;">' + txShort + '</td>';
     tbody += '<td>' + (d.issue_type || '—') + '</td>';
     tbody += '<td><span style="color:' + recColor + '">' + rec + '</span></td>';
     tbody += '<td><span style="color:' + statusColor + '">' + statusLabel + '</span></td>';
