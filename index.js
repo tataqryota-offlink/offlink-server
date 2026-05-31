@@ -1719,6 +1719,7 @@ app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
     const d = await pool.query('SELECT tx_id FROM disputes WHERE id=$1', [disputeId]);
     if (d.rows.length > 0) {
       const s = decision === 'resolved_refund' ? 'refunded' : 'hangus';
+      console.log('DEBUG resolve:', JSON.stringify({ decision, s, tx_id: d.rows[0].tx_id }));
       await pool.query(
         `UPDATE held_balances SET status=$1, resolved_at=NOW() WHERE tx_id=$2`,
         [s, d.rows[0].tx_id]
