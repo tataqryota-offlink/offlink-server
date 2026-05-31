@@ -1723,6 +1723,18 @@ app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
         `UPDATE held_balances SET status=$1, resolved_at=NOW() WHERE tx_id=$2`,
         [s, d.rows[0].tx_id]
       );
+      if (s === 'refunded') {
+        const hb = await pool.query(
+          `SELECT device_id, amount FROM held_balances WHERE tx_id=$1`,
+          [d.rows[0].tx_id]
+        );
+        if (hb.rows.length > 0) {
+          await pool.query(
+            `UPDATE devices SET balance = balance + $1 WHERE device_id = $2`,
+            [hb.rows[0].amount, hb.rows[0].device_id]
+          );
+        }
+      }
     }
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
