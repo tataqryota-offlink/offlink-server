@@ -795,6 +795,26 @@ app.put('/admin/dispute/:id/resolve', verifyAdmin, async (req, res) => {
       `UPDATE disputes SET status=$1, admin_note=$2, resolved_at=NOW() WHERE id=$3`,
       [status, adminNote || '', id]
     );
+    const d = await pool.query('SELECT tx_id FROM disputes WHERE id=$1', [id]);
+    if (d.rows.length > 0) {
+      const s = status === 'resolved_refund' ? 'refunded' : 'hangus';
+      await pool.query(
+        `UPDATE held_balances SET status=$1, resolved_at=NOW() WHERE tx_id=$2`,
+        [s, d.rows[0].tx_id]
+      );
+      if (s === 'refunded') {
+        const hb = await pool.query(
+          `SELECT device_id, amount FROM held_balances WHERE tx_id=$1`,
+          [d.rows[0].tx_id]
+        );
+        if (hb.rows.length > 0) {
+          await pool.query(
+            `UPDATE devices SET balance = balance + $1 WHERE device_id = $2`,
+            [hb.rows[0].amount, hb.rows[0].device_id]
+          );
+        }
+      }
+    }
     res.json({ success: true, message: 'Dispute diselesaikan' });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
