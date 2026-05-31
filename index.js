@@ -1358,6 +1358,10 @@ app.post('/tx/held', async (req, res) => {
        ON CONFLICT (tx_id) DO NOTHING`,
       [txId, deviceId, amount]
     );
+    await pool.query(
+      `UPDATE devices SET held_balance = held_balance + $1 WHERE device_id = $2`,
+      [amount, deviceId]
+    );
     // Catat event QR diterbitkan
     await pool.query(
       `INSERT INTO tx_events (tx_id, device_id, event_type, detail)
