@@ -1383,7 +1383,7 @@ app.get('/tx/held/:deviceId', async (req, res) => {
        FROM held_balances h
        LEFT JOIN transactions t ON h.tx_id = t.tx_id
        LEFT JOIN users u ON t.receiver_id = u.device_id
-       WHERE h.device_id = $1
+       WHERE h.device_id = $1 AND h.status = 'held'
        ORDER BY h.created_at DESC`,
       [req.params.deviceId]
     );
