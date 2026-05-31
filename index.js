@@ -1705,14 +1705,16 @@ app.get('/admin/api/dispute/messages/:disputeId', verifyAdmin, async (req, res) 
 // ADMIN — HELD BALANCES
 app.get('/admin/api/held-balances', verifyAdmin, async (req, res) => {
   try {
+    const status = req.query.status || null;
     const result = await pool.query(`
       SELECT h.tx_id, h.device_id, h.amount, h.status, h.reason,
              h.created_at, h.resolved_at,
              u.full_name, u.phone
       FROM held_balances h
       LEFT JOIN users u ON h.device_id = u.device_id
+      WHERE ($1::text IS NULL OR h.status = $1)
       ORDER BY h.created_at DESC LIMIT 100
-    `);
+    `, [status]);
     res.json(result.rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

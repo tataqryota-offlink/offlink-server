@@ -341,6 +341,13 @@
         <div class="tableHeader">
           <h3>Daftar Dana Tertahan</h3>
           <button class="btnRefresh" onclick="loadHeldBalances()">🔄 Refresh</button>
+          <select id="heldFilter" onchange="loadHeldBalances()" style="margin-left:10px;padding:6px 10px;border-radius:8px;background:#1a2740;color:white;border:1px solid #2a5298;font-size:13px">
+            <option value="">Semua Status</option>
+            <option value="held">Tertahan</option>
+            <option value="refunded">Direfund</option>
+            <option value="hangus">Hangus</option>
+            <option value="released">Selesai</option>
+          </select>
         </div>
         <div id="heldTable"><div class="loading">Memuat data...</div></div>
       </div>
@@ -1286,7 +1293,9 @@ async function loadTxDetail() {
 // ══════════════════════════════════════════
 async function loadHeldBalances() {
   document.getElementById('heldTable').innerHTML = '<div class="loading">Memuat data...</div>';
-  const rows = await fetch(`${API}/admin/api/held-balances`, {credentials:'include'}).then(r=>r.json()).catch(()=>null);
+  const filter = document.getElementById('heldFilter')?.value || '';
+  const url = filter ? `${API}/admin/api/held-balances?status=${filter}` : `${API}/admin/api/held-balances`;
+  const rows = await fetch(url, {credentials:'include'}).then(r=>r.json()).catch(()=>null);
   if (!rows || rows.length === 0) {
     document.getElementById('heldTable').innerHTML = '<div class="loading">Tidak ada dana tertahan</div>';
     return;
