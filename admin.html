@@ -311,6 +311,19 @@
     <div class="section" id="sec-config">
       <div class="pageTitle">Pengaturan Sistem</div>
       <div class="pageSubtitle">Konfigurasi parameter sistem OFFLINK</div>
+      <div id="maintenanceBox" style="background:#1e1a2e;border:1px solid #7c3aed;border-radius:12px;padding:20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;color:#a78bfa;font-size:15px;">🔧 Mode Maintenance</div>
+          <div style="color:#94a3b8;font-size:13px;margin-top:4px;">Saat aktif, semua pengguna app akan melihat pesan pemeliharaan sistem.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span id="maintenanceStatus" style="font-size:13px;color:#94a3b8">Memuat...</span>
+          <button id="maintenanceBtn" onclick="toggleMaintenance()"
+            style="padding:8px 20px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;background:#374151;color:#fff;">
+            ...
+          </button>
+        </div>
+      </div>
       <div class="tableWrap">
         <div class="tableHeader"><h3>Konfigurasi</h3><button class="btnRefresh" onclick="loadConfig()">🔄 Refresh</button></div>
         <div id="configTable"><div class="loading">Memuat data...</div></div>
@@ -1190,6 +1203,7 @@ async function loadHealth() {
 // PENGATURAN SISTEM
 // ══════════════════════════════════════════
 async function loadConfig() {
+  loadMaintenanceStatus();
   document.getElementById('configTable').innerHTML = '<div class="loading">Memuat konfigurasi...</div>';
   const rows = await apiFetch('/admin/api/config');
   if (!rows || rows.length === 0) {
@@ -1212,6 +1226,29 @@ async function loadConfig() {
         `).join('')}
       </tbody>
     </table>`;
+}
+
+async function loadMaintenanceStatus() {
+  const r = await apiFetch('/admin/api/maintenance');
+  if (!r) return;
+  const on = r.maintenance;
+  document.getElementById('maintenanceStatus').textContent = on ? '🔴 AKTIF' : '🟢 Nonaktif';
+  document.getElementById('maintenanceStatus').style.color = on ? '#f87171' : '#4ade80';
+  document.getElementById('maintenanceBtn').textContent = on ? 'Matikan' : 'Aktifkan';
+  document.getElementById('maintenanceBtn').style.background = on ? '#7f1d1d' : '#166534';
+}
+
+async function toggleMaintenance() {
+  const current = document.getElementById('maintenanceStatus').textContent.includes('AKTIF');
+  const next = !current;
+  const label = next ? 'MENGAKTIFKAN mode maintenance?' : 'MEMATIKAN mode maintenance?';
+  if (!confirm(label)) return;
+  const r = await apiFetch('/admin/api/maintenance', 'POST', { enabled: next });
+  if (r && r.success) {
+    loadMaintenanceStatus();
+  } else {
+    alert('Gagal mengubah mode maintenance');
+  }
 }
 
 async function saveConfig() {

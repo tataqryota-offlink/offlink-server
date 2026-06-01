@@ -1074,6 +1074,42 @@ app.get('/admin/api/config', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── MAINTENANCE MODE ───
+app.get('/admin/api/maintenance', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query("SELECT value FROM system_config WHERE key = 'maintenance_mode'");
+    const isOn = r.rows.length > 0 && r.rows[0].value === 'true';
+    res.json({ maintenance: isOn });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/admin/api/maintenance', verifyAdmin, async (req, res) => {
+  const { enabled } = req.body;
+  try {
+    await pool.query(
+      `INSERT INTO system_config (key, value, updated_by, updated_at)
+       VALUES ('maintenance_mode', $1, 'admin', NOW())
+       ON CONFLICT (key) DO UPDATE SET value = $1, updated_by = 'admin', updated_at = NOW()`,
+      [enabled ? 'true' : 'false']
+    );
+    await pool.query(
+      `INSERT INTO audit_logs (admin_user, action, target, detail, ip_address)
+       VALUES ('admin', 'MAINTENANCE_MODE', 'system', $1, $2)`,
+      [JSON.stringify({ enabled }), req.ip]
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── CEK MAINTENANCE (PUBLIC — dipanggil Flutter) ───
+app.get('/system/maintenance', async (req, res) => {
+  try {
+    const r = await pool.query("SELECT value FROM system_config WHERE key = 'maintenance_mode'");
+    const isOn = r.rows.length > 0 && r.rows[0].value === 'true';
+    res.json({ maintenance: isOn });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/admin/api/config', verifyAdmin, async (req, res) => {
   const { key, value } = req.body;
   if (!key || !value) return res.status(400).json({ error: 'key dan value wajib diisi' });
