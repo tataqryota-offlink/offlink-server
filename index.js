@@ -1,5 +1,5 @@
-// ============================================================
-// OFFLINK SERVER — Backend API
+﻿// ============================================================
+// OFFLINK SERVER â€” Backend API
 // ============================================================
 
 require('dotenv').config();
@@ -23,9 +23,12 @@ const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
 const ed25519 = require('@noble/ed25519');
 const crypto = require('crypto');
+const promClient = require('prom-client');
+const promRegister = new promClient.Registry();
+promRegister.setDefaultLabels({ app: 'offlink' });
 
 // ─────────────────────────────────────────────
-// LOGGER — Winston structured logging
+// LOGGER â€” Winston structured logging
 // ─────────────────────────────────────────────
 const winston = require('winston');
 const logger = winston.createLogger({
@@ -37,6 +40,43 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console(),
   ],
+});
+
+// ─────────────────────────────────────────────
+// I12 — METRICS DEFINITION
+// ─────────────────────────────────────────────
+const metricTxTotal = new promClient.Counter({
+  name: 'offlink_tx_total',
+  help: 'Total transaksi sync masuk',
+  labelNames: ['status'],
+  registers: [promRegister],
+});
+const metricFraud = new promClient.Counter({
+  name: 'offlink_fraud_total',
+  help: 'Total inkonsistensi Dana Tertahan terdeteksi',
+  registers: [promRegister],
+});
+const metricSyncErrors = new promClient.Counter({
+  name: 'offlink_sync_errors_total',
+  help: 'Total error di endpoint sync',
+  registers: [promRegister],
+});
+const metricDanaTertahanCount = new promClient.Gauge({
+  name: 'offlink_dana_tertahan_count',
+  help: 'Jumlah TX dengan Dana Tertahan status held',
+  registers: [promRegister],
+});
+const metricDanaTertahanNominal = new promClient.Gauge({
+  name: 'offlink_dana_tertahan_nominal',
+  help: 'Total nominal Dana Tertahan (Rp) status held',
+  registers: [promRegister],
+});
+const metricHttpDuration = new promClient.Histogram({
+  name: 'offlink_http_duration_seconds',
+  help: 'Durasi response HTTP per endpoint',
+  labelNames: ['method', 'route', 'status'],
+  buckets: [0.05, 0.1, 0.3, 0.5, 1, 2, 5],
+  registers: [promRegister],
 });
 
 ed25519.etc.sha512Sync = (...msgs) => {
@@ -80,6 +120,31 @@ app.use(cors({
 }));          
 app.use(express.json());
 app.use(cookieParser());
+
+// ─── I12: catat durasi semua HTTP request ───
+app.use((req, res, next) => {
+  const end = metricHttpDuration.startTimer({ method: req.method, route: req.path });
+  res.on('finish', () => end({ status: res.statusCode }));
+  next();
+});
+
+// ─── I12: endpoint /metrics untuk Prometheus/Grafana ───
+app.get('/metrics', async (req, res) => {
+  const token = process.env.METRICS_TOKEN;
+  if (!token) return res.status(503).send('Metrics tidak dikonfigurasi');
+  const auth = (req.headers['authorization'] || '').replace('Bearer ', '');
+  if (auth !== token) return res.status(401).send('Unauthorized');
+  try {
+    const r = await pool.query(
+      `SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as total
+       FROM held_balances WHERE status = 'held'`
+    );
+    metricDanaTertahanCount.set(parseInt(r.rows[0].cnt));
+    metricDanaTertahanNominal.set(parseInt(r.rows[0].total));
+  } catch (_) {}
+  res.set('Content-Type', promRegister.contentType);
+  res.end(await promRegister.metrics());
+});
 
 // Update last_seen_at setiap device aktif
 app.use((req, res, next) => {
@@ -322,11 +387,11 @@ async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_aml_alerts_device      ON aml_alerts(device_id);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_created     ON audit_logs(created_at);
   `);
-  logger.info('✅ Database tables ready');
+  logger.info('âœ… Database tables ready');
 }
 
 // ─────────────────────────────────────────────
-// ROUTES — PUBLIC
+// ROUTES â€” PUBLIC
 // ─────────────────────────────────────────────
 
 // Health check
@@ -334,12 +399,13 @@ app.get('/', (req, res) => {
   res.json({ status: 'OFFLINK Server Running', time: new Date() });
 });
 
+app.get("/chart.min.js",(req,res)=>{res.sendFile(require("path").join(__dirname,"public","chart.min.js"))});
 // Serve admin dashboard
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-// Server time — TrustClock
+// Server time â€” TrustClock
 app.get('/time', (req, res) => {
   res.json({ serverTime: Math.floor(Date.now() / 1000) });
 });
@@ -383,7 +449,7 @@ app.post('/device/fingerprint', async (req, res) => {
     );
     if (existing.rows.length > 0) {
       const oldHash = existing.rows[0].fp_hash;
-      // Kalau hash berubah dan bukan pertama kali — catat anomali
+      // Kalau hash berubah dan bukan pertama kali â€” catat anomali
       if (oldHash && oldHash !== fpHash) {
         await pool.query(
           `INSERT INTO audit_logs (admin_user, action, target, detail, created_at)
@@ -425,7 +491,7 @@ app.post('/nonce/verify', nonceLimiter, async (req, res) => {
   [deviceId, nonce]
 );
 if (result.rows.length === 0)
-  return res.status(409).json({ error: 'Nonce sudah dipakai — double spend terdeteksi' });
+  return res.status(409).json({ error: 'Nonce sudah dipakai â€” double spend terdeteksi' });
 res.json({ success: true, message: 'Nonce valid' });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -540,7 +606,7 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
     if (usedResult.rows.length > 0)
       return res.status(409).json({ error: 'Transaksi sudah pernah diproses' });
 
-    // Saldo dikelola lokal di HP — server hanya catat transaksi
+    // Saldo dikelola lokal di HP â€” server hanya catat transaksi
 
     // Simpan transaksi
     await pool.query(
@@ -557,8 +623,10 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
     // Cek AML otomatis
     checkAml(txId, senderId, receiverId, amount);
 
+    metricTxTotal.inc({ status: 'selesai' });
     res.json({ success: true, message: 'Transaksi tersimpan' });
   } catch (e) {
+    metricSyncErrors.inc();
     res.status(500).json({ error: e.message });
   }
 });
@@ -649,7 +717,7 @@ app.post('/topup/fee', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ROUTES — ADMIN
+// ROUTES â€” ADMIN
 // ─────────────────────────────────────────────
 
 // Logout admin
@@ -729,11 +797,11 @@ app.get('/admin/devices', verifyAdmin, async (req, res) => {
       SELECT d.device_id, d.public_key, d.created_at,
              COALESCE(ds.status, 'active') as status,
              COALESCE(ds.reason, '') as reason,
-             COALESCE(u.full_name, '—') as full_name,
-             COALESCE(u.phone, '—') as phone,
-             COALESCE(d.device_model, '—') as device_model,
-             COALESCE(d.manufacturer, '—') as manufacturer,
-             COALESCE(d.fp_updated_at::text, '—') as fp_updated_at,
+             COALESCE(u.full_name, 'â€”') as full_name,
+             COALESCE(u.phone, 'â€”') as phone,
+             COALESCE(d.device_model, 'â€”') as device_model,
+             COALESCE(d.manufacturer, 'â€”') as manufacturer,
+             COALESCE(d.fp_updated_at::text, 'â€”') as fp_updated_at,
              (SELECT COUNT(*) FROM transactions
               WHERE sender_id = d.device_id OR receiver_id = d.device_id) as tx_count
       FROM devices d
@@ -859,7 +927,7 @@ app.post('/admin/users/unblock', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN — KYC & PENGGUNA
+// ADMIN â€” KYC & PENGGUNA
 // ─────────────────────────────────────────────
 
 app.get('/admin/api/users/detail/:deviceId', verifyAdmin, async (req, res) => {
@@ -968,7 +1036,7 @@ app.post('/admin/api/users/topup', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN — AML & ANOMALI
+// ADMIN â€” AML & ANOMALI
 // ─────────────────────────────────────────────
 app.get('/admin/api/aml/alerts', verifyAdmin, async (req, res) => {
   try {
@@ -1014,7 +1082,7 @@ app.post('/admin/api/aml/handle', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN — AUDIT LOG
+// ADMIN â€” AUDIT LOG
 // ─────────────────────────────────────────────
 app.get('/admin/api/audit-logs', verifyAdmin, async (req, res) => {
   try {
@@ -1028,7 +1096,7 @@ app.get('/admin/api/audit-logs', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN — SYSTEM HEALTH
+// ADMIN â€” SYSTEM HEALTH
 // ─────────────────────────────────────────────
 app.get('/admin/api/health', verifyAdmin, async (req, res) => {
   try {
@@ -1048,7 +1116,7 @@ app.get('/admin/api/health', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN — REKONSILIASI
+// ADMIN â€” REKONSILIASI
 // ─────────────────────────────────────────────
 app.get('/admin/api/reconciliation/summary', verifyAdmin, async (req, res) => {
   try {
@@ -1065,7 +1133,7 @@ app.get('/admin/api/reconciliation/summary', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN — KONFIGURASI SISTEM
+// ADMIN â€” KONFIGURASI SISTEM
 // ─────────────────────────────────────────────
 app.get('/admin/api/config', verifyAdmin, async (req, res) => {
   try {
@@ -1101,7 +1169,7 @@ app.post('/admin/api/maintenance', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─── CEK MAINTENANCE (PUBLIC — dipanggil Flutter) ───
+// ─── CEK MAINTENANCE (PUBLIC â€” dipanggil Flutter) ───
 app.get('/system/maintenance', async (req, res) => {
   try {
     const r = await pool.query("SELECT value FROM system_config WHERE key = 'maintenance_mode'");
@@ -1163,7 +1231,7 @@ app.get('/device/status/:deviceId', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN — EXPORT DATA
+// ADMIN â€” EXPORT DATA
 // ─────────────────────────────────────────────
 app.get('/admin/export/transactions/csv', verifyAdmin, async (req, res) => {
   try {
@@ -1204,7 +1272,7 @@ app.get('/admin/export/users/csv', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN — EXPORT PDF
+// ADMIN â€” EXPORT PDF
 // ─────────────────────────────────────────────
 const PDFDocument = require('pdfkit');
 
@@ -1336,7 +1404,7 @@ async function checkAml(txId, senderId, receiverId, amount) {
 }
 
 // ─────────────────────────────────────────────
-// ADMIN — HISTORY TRANSAKSI DETAIL
+// ADMIN â€” HISTORY TRANSAKSI DETAIL
 // ─────────────────────────────────────────────
 app.get('/admin/api/transactions/detail', verifyAdmin, async (req, res) => {
   try {
@@ -1494,6 +1562,7 @@ app.post('/dispute/report', async (req, res) => {
       [txId]
     );
     const txFoundOnServer = txCheck.rows.length > 0;
+    if (txFoundOnServer) metricFraud.inc(); // I12: HP B sudah terima tapi HP A tidak selesai
 
     const deadline = issuedAt
       ? new Date(issuedAt * 1000 + 14 * 24 * 60 * 60 * 1000)
@@ -1738,7 +1807,7 @@ app.get('/admin/api/dispute/messages/:disputeId', verifyAdmin, async (req, res) 
   }
 });
 
-// ADMIN — HELD BALANCES
+// ADMIN â€” HELD BALANCES
 app.get('/admin/api/held-balances', verifyAdmin, async (req, res) => {
   try {
     const status = req.query.status || null;
@@ -1755,7 +1824,7 @@ app.get('/admin/api/held-balances', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ADMIN — DISPUTES DETAIL
+// ADMIN â€” DISPUTES DETAIL
 app.get('/admin/api/disputes/detail', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1768,7 +1837,7 @@ app.get('/admin/api/disputes/detail', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ADMIN — RESOLVE DISPUTE
+// ADMIN â€” RESOLVE DISPUTE
 app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
   const { disputeId, decision, adminNote } = req.body;
   if (!disputeId || !decision)
@@ -1809,8 +1878,10 @@ app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
 initDB().then(() => {
   const port = process.env.PORT || 3000;
   app.listen(port, () => {
-    logger.info(`🚀 OFFLINK Server berjalan di port ${port}`);
+    logger.info(`ðŸš€ OFFLINK Server berjalan di port ${port}`);
   });
 });
+
+
 
 
