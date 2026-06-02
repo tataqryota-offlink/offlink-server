@@ -1,10 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OFFLINK Admin Dashboard</title>
-
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Segoe UI',sans-serif; background:#0F1B2D; color:#E8F0FE; min-height:100vh; }
@@ -87,26 +86,6 @@
   .truncate { max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .section { display:none; }
   .section.active { display:block; padding:24px; }
-  /* â”€â”€ RESPONSIVE LAPTOP â”€â”€ */
-  @media (max-width:1280px) {
-    .sidebar { width:180px; }
-    .navItem { padding:10px 14px; font-size:13px; }
-    .content { padding:20px; }
-    .statsGrid { grid-template-columns:repeat(3,1fr); gap:12px; }
-    .statValue { font-size:22px; }
-  }
-  @media (max-width:1024px) {
-    .sidebar { width:160px; }
-    .navItem { font-size:12px; }
-    .content { padding:16px; }
-    .statsGrid { grid-template-columns:repeat(2,1fr); gap:10px; }
-    .tableHeader { flex-direction:column; align-items:flex-start; gap:8px; }
-    .modalBox { width:95%; }
-    th { font-size:10px; padding:8px 10px; }
-    td { font-size:12px; padding:8px 10px; }
-    .truncate { max-width:90px; }
-    .pageTitle { font-size:17px; }
-  }
 </style>
 </head>
 <body>
@@ -148,7 +127,7 @@
       <div class="navItem" onclick="showSection('heldbalances')"><span class="navIcon">🔒</span> Dana Tertahan</div>
       <div class="navItem" onclick="showSection('disputedetail')"><span class="navIcon">⚖️</span> Pengaduan</div>
       <div class="navItem" onclick="showSection('config')"><span class="navIcon">⚙️</span> Pengaturan</div>
-      <div class="navItem" onclick="window.open('/admin/monitoring','_blank')"><span class="navIcon">📡</span> Monitoring</div>
+    </div>
     <div style="flex:1"></div>
     <div class="sidebarFooter">
       <button class="btnLogout" onclick="doLogout()">Keluar</button>
@@ -162,14 +141,14 @@
       <div class="pageTitle">Overview</div>
       <div class="pageSubtitle">Ringkasan aktivitas OFFLINK</div>
       <div class="statsGrid">
-        <div class="statCard"><div class="statLabel">TOTAL TRANSAKSI</div><div class="statValue" id="st-tx">â€”</div></div>
-        <div class="statCard"><div class="statLabel">TOTAL PERANGKAT</div><div class="statValue" id="st-dev">â€”</div></div>
-        <div class="statCard"><div class="statLabel">PERANGKAT TERKUNCI</div><div class="statValue" id="st-locked" style="color:#f87171">â€”</div></div>
-        <div class="statCard"><div class="statLabel">LAPORAN PENDING</div><div class="statValue" id="st-disp" style="color:#fbbf24">â€”</div></div>
-        <div class="statCard"><div class="statLabel">TOTAL FEE TERKUMPUL</div><div class="statValue" id="st-fee">â€”</div><div class="statSub" id="st-fee-today"></div></div>
-        <div class="statCard"><div class="statLabel">SERVER</div><div class="statValue" style="color:#4ade80;font-size:18px">â— ONLINE</div><div class="statSub" id="st-time"></div></div>
+        <div class="statCard"><div class="statLabel">TOTAL TRANSAKSI</div><div class="statValue" id="st-tx">—</div></div>
+        <div class="statCard"><div class="statLabel">TOTAL PERANGKAT</div><div class="statValue" id="st-dev">—</div></div>
+        <div class="statCard"><div class="statLabel">PERANGKAT TERKUNCI</div><div class="statValue" id="st-locked" style="color:#f87171">—</div></div>
+        <div class="statCard"><div class="statLabel">LAPORAN PENDING</div><div class="statValue" id="st-disp" style="color:#fbbf24">—</div></div>
+        <div class="statCard"><div class="statLabel">TOTAL FEE TERKUMPUL</div><div class="statValue" id="st-fee">—</div><div class="statSub" id="st-fee-today"></div></div>
+        <div class="statCard"><div class="statLabel">SERVER</div><div class="statValue" style="color:#4ade80;font-size:18px">● ONLINE</div><div class="statSub" id="st-time"></div></div>
       </div>
-      <button class="btnPrimary" style="width:auto;padding:10px 24px;" onclick="loadStats()">ðŸ”„ Refresh</button>
+      <button class="btnPrimary" style="width:auto;padding:10px 24px;" onclick="loadStats()">🔄 Refresh</button>
     </div>
 
     <!-- TRANSAKSI -->
@@ -177,19 +156,19 @@
       <div class="pageTitle">Transaksi</div>
       <div class="pageSubtitle">100 transaksi terakhir yang tersync ke server</div>
       <div style="background:#0F1B2D;border:1px solid #2A5298;border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:12px;color:#7AABF0;line-height:1.8;">
-        <div style="font-weight:600;color:#4A9EFF;margin-bottom:6px;">â„¹ï¸ Keterangan Status Device</div>
-        <div>ðŸŸ¢ <b style="color:#4ade80">Online</b> â€” Device aktif dalam 5 menit sebelum transaksi terjadi (ada koneksi internet saat TX)</div>
-        <div>âš« <b style="color:#6b7280">Offline</b> â€” Device tidak aktif &gt;5 menit â€” transaksi dibuat saat offline, baru tersync belakangan</div>
-        <div style="margin-top:6px;color:#4A9EFF;">â€” Kolom ini membuktikan transaksi Offlink berjalan tanpa internet.</div>
+        <div style="font-weight:600;color:#4A9EFF;margin-bottom:6px;">ℹ️ Keterangan Status Device</div>
+        <div>🟢 <b style="color:#4ade80">Online</b> — Device aktif dalam 5 menit sebelum transaksi terjadi (ada koneksi internet saat TX)</div>
+        <div>⚫ <b style="color:#6b7280">Offline</b> — Device tidak aktif &gt;5 menit — transaksi dibuat saat offline, baru tersync belakangan</div>
+        <div style="margin-top:6px;color:#4A9EFF;">— Kolom ini membuktikan transaksi Offlink berjalan tanpa internet.</div>
       </div>
       <div class="tableWrap">
         <div class="tableHeader">
           <h3>Daftar Transaksi</h3>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input id="txSearch" type="text" placeholder="Cari TX ID, nama, nominal..." onkeyup="filterTxTable()" style="padding:6px 12px;border-radius:8px;background:#1a2740;color:white;border:1px solid #2a5298;font-size:13px;width:260px;">
-            <button class="btnRefresh" onclick="loadTransactions()">ðŸ”„ Refresh</button>
-            <button class="btnRefresh" style="background:#7c3aed;" onclick="exportPDF()">ðŸ“„ Export PDF</button>
-            <button class="btnRefresh" style="background:#166534;" onclick="exportCSV('transactions')">â¬‡ï¸ Export CSV</button>
+            <button class="btnRefresh" onclick="loadTransactions()">🔄 Refresh</button>
+            <button class="btnRefresh" style="background:#7c3aed;" onclick="exportPDF()">📄 Export PDF</button>
+            <button class="btnRefresh" style="background:#166534;" onclick="exportCSV('transactions')">⬇️ Export CSV</button>
           </div>
         </div>
         <div id="txTable"><div class="loading">Memuat data...</div></div>
@@ -199,14 +178,14 @@
     <!-- PERANGKAT -->
     <div class="section" id="sec-devices">
       <div class="pageTitle">Perangkat</div>
-      <div class="pageSubtitle">Semua perangkat terdaftar â€” kunci/buka akses</div>
+      <div class="pageSubtitle">Semua perangkat terdaftar — kunci/buka akses</div>
       <div class="tableWrap">
         <div class="tableHeader">
           <h3>Daftar Perangkat</h3>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input id="devSearch" type="text" placeholder="Cari nama, device ID, model..." onkeyup="filterDevTable()" style="padding:6px 12px;border-radius:8px;background:#1a2740;color:white;border:1px solid #2a5298;font-size:13px;width:260px;">
-            <button class="btnRefresh" onclick="loadDevices()">ðŸ”„ Refresh</button>
-            <button class="btnRefresh" style="background:#166534;" onclick="exportCSV('users')">â¬‡ï¸ Export CSV</button>
+            <button class="btnRefresh" onclick="loadDevices()">🔄 Refresh</button>
+            <button class="btnRefresh" style="background:#166534;" onclick="exportCSV('users')">⬇️ Export CSV</button>
           </div>
         </div>
         <div id="devTable"><div class="loading">Memuat data...</div></div>
@@ -218,7 +197,7 @@
       <div class="pageTitle">Laporan Masalah</div>
       <div class="pageSubtitle">Kelola refund dan dana tertahan dari user</div>
       <div class="tableWrap">
-        <div class="tableHeader"><h3>Semua Laporan</h3><button class="btnRefresh" onclick="loadDisputes()">ðŸ”„ Refresh</button></div>
+        <div class="tableHeader"><h3>Semua Laporan</h3><button class="btnRefresh" onclick="loadDisputes()">🔄 Refresh</button></div>
         <div id="dispTable"><div class="loading">Memuat data...</div></div>
       </div>
     </div>
@@ -228,11 +207,11 @@
       <div class="pageTitle">Fee Top Up</div>
       <div class="pageSubtitle">Rekap pendapatan fee dari setiap top up</div>
       <div style="background:#1a3a2a;border-left:4px solid #4caf50;padding:12px 16px;border-radius:6px;margin-bottom:16px;color:#a8d5b5;font-size:14px;">
-        ðŸ’¡ <strong style="color:#4caf50;">Kebijakan Fee Offlink:</strong> Offlink hanya mengambil fee saat top up saldo. Semua transaksi offline antar pengguna <strong>gratis</strong>, termasuk di daerah tanpa sinyal sekalipun.
+        💡 <strong style="color:#4caf50;">Kebijakan Fee Offlink:</strong> Offlink hanya mengambil fee saat top up saldo. Semua transaksi offline antar pengguna <strong>gratis</strong>, termasuk di daerah tanpa sinyal sekalipun.
       </div>
       <div id="feeSummary" style="margin-bottom:20px;"></div>
       <div class="tableWrap">
-        <div class="tableHeader"><h3>Riwayat Fee</h3><button class="btnRefresh" onclick="loadFees()">ðŸ”„ Refresh</button></div>
+        <div class="tableHeader"><h3>Riwayat Fee</h3><button class="btnRefresh" onclick="loadFees()">🔄 Refresh</button></div>
         <div id="feeTable"><div class="loading">Memuat data...</div></div>
       </div>
     </div>
@@ -242,18 +221,16 @@
       <div class="pageTitle">KYC & Pengguna</div>
       <div class="pageSubtitle">Manajemen identitas dan verifikasi pengguna</div>
       <div class="statsGrid" style="grid-template-columns:repeat(3,1fr)">
-        <div class="statCard"><div class="statLabel">TOTAL PENGGUNA</div><div class="statValue" id="kyc-total">â€”</div></div>
-        <div class="statCard"><div class="statLabel">TERVERIFIKASI</div><div class="statValue" id="kyc-verified" style="color:#4ade80">â€”</div></div>
-        <div class="statCard"><div class="statLabel">BELUM VERIFIKASI</div><div class="statValue" id="kyc-pending" style="color:#fbbf24">â€”</div></div>
-      </div>
-        <div id="kycLegend" style="font-size:13px;line-height:2;"></div>
+        <div class="statCard"><div class="statLabel">TOTAL PENGGUNA</div><div class="statValue" id="kyc-total">—</div></div>
+        <div class="statCard"><div class="statLabel">TERVERIFIKASI</div><div class="statValue" id="kyc-verified" style="color:#4ade80">—</div></div>
+        <div class="statCard"><div class="statLabel">BELUM VERIFIKASI</div><div class="statValue" id="kyc-pending" style="color:#fbbf24">—</div></div>
       </div>
       <div class="tableWrap">
         <div class="tableHeader">
           <h3>Daftar Pengguna</h3>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <input id="kycSearch" type="text" placeholder="Cari nama, no HP..." onkeyup="filterKycTable()" style="padding:6px 12px;border-radius:8px;background:#1a2740;color:white;border:1px solid #2a5298;font-size:13px;width:240px;">
-            <button class="btnRefresh" onclick="loadKyc()">ðŸ”„ Refresh</button>
+            <button class="btnRefresh" onclick="loadKyc()">🔄 Refresh</button>
           </div>
         </div>
         <div id="kycTable"><div class="loading">Memuat data...</div></div>
@@ -267,25 +244,25 @@
 
       <!-- CATATAN PENGINGAT ADMIN -->
       <div style="background:#1e3a1e;border:1px solid #166534;border-radius:10px;padding:16px;margin-bottom:20px;font-size:13px;color:#bbf7d0;line-height:1.9">
-        <div style="font-weight:700;color:#4ade80;margin-bottom:8px">ðŸ“‹ Panduan Alert AML â€” Kapan Alert Muncul?</div>
-        <div>ðŸ”´ <strong>LARGE_TRANSACTION (Risiko Tinggi)</strong> â€” Setiap transaksi tunggal di atas <strong>Rp 500.000</strong>, tanpa batas waktu</div>
-        <div>ðŸ”´ <strong>FREQUENT_TRANSFER â€” Pengirim (Risiko Tinggi)</strong> â€” 1 device kirim ke <strong>5+ device berbeda</strong> dalam 1 jam (ciri money mule)</div>
-        <div>ðŸ”´ <strong>FREQUENT_TRANSFER â€” Penerima (Risiko Tinggi)</strong> â€” 1 device terima dari <strong>5+ device berbeda</strong> dalam 1 jam (ciri pengumpulan dana ilegal)</div>
-        <div>ðŸŸ¡ <strong>FREQUENT_TRANSFER â€” Pasangan Sama (Risiko Sedang)</strong> â€” Pengirim dan penerima <strong>sama</strong> bertransaksi 5+ kali dalam 1 jam</div>
+        <div style="font-weight:700;color:#4ade80;margin-bottom:8px">📋 Panduan Alert AML — Kapan Alert Muncul?</div>
+        <div>🔴 <strong>LARGE_TRANSACTION (Risiko Tinggi)</strong> — Setiap transaksi tunggal di atas <strong>Rp 500.000</strong>, tanpa batas waktu</div>
+        <div>🔴 <strong>FREQUENT_TRANSFER — Pengirim (Risiko Tinggi)</strong> — 1 device kirim ke <strong>5+ device berbeda</strong> dalam 1 jam (ciri money mule)</div>
+        <div>🔴 <strong>FREQUENT_TRANSFER — Penerima (Risiko Tinggi)</strong> — 1 device terima dari <strong>5+ device berbeda</strong> dalam 1 jam (ciri pengumpulan dana ilegal)</div>
+        <div>🟡 <strong>FREQUENT_TRANSFER — Pasangan Sama (Risiko Sedang)</strong> — Pengirim dan penerima <strong>sama</strong> bertransaksi 5+ kali dalam 1 jam</div>
         <div style="margin-top:10px;color:#86efac">
-          â„¹ï¸ Alert dibuat otomatis saat transaksi sync ke server.<br>
-          âœ… Klik <strong>Selesai</strong> jika sudah ditangani. Klik <strong>Abaikan</strong> jika dianggap wajar.<br>
-          âš™ï¸ Threshold bisa diubah di menu <strong>Pengaturan</strong>.<br>
-          ðŸ“Œ Semua tindakan admin tercatat di menu <strong>Audit Log</strong>.
+          ℹ️ Alert dibuat otomatis saat transaksi sync ke server.<br>
+          ✅ Klik <strong>Selesai</strong> jika sudah ditangani. Klik <strong>Abaikan</strong> jika dianggap wajar.<br>
+          ⚙️ Threshold bisa diubah di menu <strong>Pengaturan</strong>.<br>
+          📌 Semua tindakan admin tercatat di menu <strong>Audit Log</strong>.
         </div>
       </div>
       <div class="statsGrid" style="grid-template-columns:repeat(3,1fr)">
-        <div class="statCard"><div class="statLabel">ALERT TERBUKA</div><div class="statValue" id="aml-open" style="color:#f87171">â€”</div></div>
-        <div class="statCard"><div class="statLabel">RISIKO TINGGI</div><div class="statValue" id="aml-high" style="color:#f87171">â€”</div></div>
-        <div class="statCard"><div class="statLabel">ALERT HARI INI</div><div class="statValue" id="aml-today" style="color:#fbbf24">â€”</div></div>
+        <div class="statCard"><div class="statLabel">ALERT TERBUKA</div><div class="statValue" id="aml-open" style="color:#f87171">—</div></div>
+        <div class="statCard"><div class="statLabel">RISIKO TINGGI</div><div class="statValue" id="aml-high" style="color:#f87171">—</div></div>
+        <div class="statCard"><div class="statLabel">ALERT HARI INI</div><div class="statValue" id="aml-today" style="color:#fbbf24">—</div></div>
       </div>
       <div class="tableWrap">
-        <div class="tableHeader"><h3>Daftar Alert</h3><button class="btnRefresh" onclick="loadAml()">ðŸ”„ Refresh</button></div>
+        <div class="tableHeader"><h3>Daftar Alert</h3><button class="btnRefresh" onclick="loadAml()">🔄 Refresh</button></div>
         <div id="amlTable"><div class="loading">Memuat data...</div></div>
       </div>
     </div>
@@ -295,13 +272,13 @@
       <div class="pageTitle">Rekonsiliasi & Settlement</div>
       <div class="pageSubtitle">Ringkasan settlement transaksi offline</div>
       <div class="statsGrid" style="grid-template-columns:repeat(2,1fr)">
-        <div class="statCard"><div class="statLabel">TOTAL TRANSAKSI</div><div class="statValue" id="rec-total">â€”</div></div>
-        <div class="statCard"><div class="statLabel">TOTAL VOLUME</div><div class="statValue" id="rec-volume">â€”</div></div>
-        <div class="statCard"><div class="statLabel">TRANSAKSI HARI INI</div><div class="statValue" id="rec-today-tx">â€”</div></div>
-        <div class="statCard"><div class="statLabel">VOLUME HARI INI</div><div class="statValue" id="rec-today-vol">â€”</div></div>
+        <div class="statCard"><div class="statLabel">TOTAL TRANSAKSI</div><div class="statValue" id="rec-total">—</div></div>
+        <div class="statCard"><div class="statLabel">TOTAL VOLUME</div><div class="statValue" id="rec-volume">—</div></div>
+        <div class="statCard"><div class="statLabel">TRANSAKSI HARI INI</div><div class="statValue" id="rec-today-tx">—</div></div>
+        <div class="statCard"><div class="statLabel">VOLUME HARI INI</div><div class="statValue" id="rec-today-vol">—</div></div>
       </div>
       <div class="tableWrap">
-        <div class="tableHeader"><h3>Detail Rekonsiliasi</h3><button class="btnRefresh" onclick="loadReconciliation()">ðŸ”„ Refresh</button></div>
+        <div class="tableHeader"><h3>Detail Rekonsiliasi</h3><button class="btnRefresh" onclick="loadReconciliation()">🔄 Refresh</button></div>
         <div id="recTable"><div class="loading">Memuat data...</div></div>
       </div>
     </div>
@@ -311,7 +288,7 @@
       <div class="pageTitle">Audit Log</div>
       <div class="pageSubtitle">Semua aksi admin tercatat dan tidak bisa dihapus</div>
       <div class="tableWrap">
-        <div class="tableHeader"><h3>Log Aktivitas Admin</h3><button class="btnRefresh" onclick="loadAuditLog()">ðŸ”„ Refresh</button></div>
+        <div class="tableHeader"><h3>Log Aktivitas Admin</h3><button class="btnRefresh" onclick="loadAuditLog()">🔄 Refresh</button></div>
         <div id="auditTable"><div class="loading">Memuat data...</div></div>
       </div>
     </div>
@@ -321,13 +298,13 @@
       <div class="pageTitle">System Health</div>
       <div class="pageSubtitle">Status server dan database secara real-time</div>
       <div class="statsGrid" style="grid-template-columns:repeat(3,1fr)">
-        <div class="statCard"><div class="statLabel">STATUS SERVER</div><div class="statValue" id="h-server" style="color:#4ade80">â€”</div></div>
-        <div class="statCard"><div class="statLabel">STATUS DATABASE</div><div class="statValue" id="h-db" style="color:#4ade80">â€”</div></div>
-        <div class="statCard"><div class="statLabel">DB LATENCY</div><div class="statValue" id="h-latency">â€”</div></div>
-        <div class="statCard"><div class="statLabel">UPTIME SERVER</div><div class="statValue" id="h-uptime">â€”</div></div>
-        <div class="statCard"><div class="statLabel">LAST CHECK</div><div class="statValue" id="h-time" style="font-size:14px">â€”</div></div>
+        <div class="statCard"><div class="statLabel">STATUS SERVER</div><div class="statValue" id="h-server" style="color:#4ade80">—</div></div>
+        <div class="statCard"><div class="statLabel">STATUS DATABASE</div><div class="statValue" id="h-db" style="color:#4ade80">—</div></div>
+        <div class="statCard"><div class="statLabel">DB LATENCY</div><div class="statValue" id="h-latency">—</div></div>
+        <div class="statCard"><div class="statLabel">UPTIME SERVER</div><div class="statValue" id="h-uptime">—</div></div>
+        <div class="statCard"><div class="statLabel">LAST CHECK</div><div class="statValue" id="h-time" style="font-size:14px">—</div></div>
       </div>
-      <button class="btnRefresh" onclick="loadHealth()">ðŸ”„ Refresh</button>
+      <button class="btnRefresh" onclick="loadHealth()">🔄 Refresh</button>
     </div>
 
     <!-- PENGATURAN -->
@@ -336,7 +313,7 @@
       <div class="pageSubtitle">Konfigurasi parameter sistem OFFLINK</div>
       <div id="maintenanceBox" style="background:#1e1a2e;border:1px solid #7c3aed;border-radius:12px;padding:20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <div style="font-weight:700;color:#a78bfa;font-size:15px;">ðŸ”§ Mode Maintenance</div>
+          <div style="font-weight:700;color:#a78bfa;font-size:15px;">🔧 Mode Maintenance</div>
           <div style="color:#94a3b8;font-size:13px;margin-top:4px;">Saat aktif, semua pengguna app akan melihat pesan pemeliharaan sistem.</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
@@ -348,7 +325,7 @@
         </div>
       </div>
       <div class="tableWrap">
-        <div class="tableHeader"><h3>Konfigurasi</h3><button class="btnRefresh" onclick="loadConfig()">ðŸ”„ Refresh</button></div>
+        <div class="tableHeader"><h3>Konfigurasi</h3><button class="btnRefresh" onclick="loadConfig()">🔄 Refresh</button></div>
         <div id="configTable"><div class="loading">Memuat data...</div></div>
       </div>
       <div style="margin-top:20px;background:#142B4E;border:1px solid #2A5298;border-radius:12px;padding:20px;">
@@ -367,13 +344,13 @@
 
     <!-- HISTORY TRANSAKSI DETAIL -->
     <div class="section" id="sec-txdetail">
-      <div class="pageTitle">ðŸ” History Transaksi Detail</div>
+      <div class="pageTitle">🔍 History Transaksi Detail</div>
       <div class="pageSubtitle">Lacak alur setiap transaksi per device</div>
       <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center">
         <input type="text" id="txDetailDeviceId" placeholder="Masukkan Device ID untuk filter (kosongkan untuk semua)"
           style="flex:1;padding:10px 14px;background:#0F1B2D;border:1px solid #2A5298;border-radius:8px;color:#E8F0FE;font-size:13px;outline:none">
-        <button class="btnRefresh" onclick="loadTxDetail()">ðŸ” Cari</button>
-        <button class="btnRefresh" onclick="document.getElementById('txDetailDeviceId').value='';loadTxDetail()">ðŸ”„ Semua</button>
+        <button class="btnRefresh" onclick="loadTxDetail()">🔍 Cari</button>
+        <button class="btnRefresh" onclick="document.getElementById('txDetailDeviceId').value='';loadTxDetail()">🔄 Semua</button>
       </div>
       <div class="tableWrap">
         <div class="tableHeader"><h3>Daftar Transaksi Detail</h3></div>
@@ -382,12 +359,12 @@
     </div>
     <!-- DANA TERTAHAN -->
     <div class="section" id="sec-heldbalances">
-      <div class="pageTitle">ðŸ”’ Dana Tertahan</div>
+      <div class="pageTitle">🔒 Dana Tertahan</div>
       <div class="pageSubtitle">Monitor dana tertahan per transaksi dari semua device</div>
       <div class="tableWrap">
         <div class="tableHeader">
           <h3>Daftar Dana Tertahan</h3>
-          <button class="btnRefresh" onclick="loadHeldBalances()">ðŸ”„ Refresh</button>
+          <button class="btnRefresh" onclick="loadHeldBalances()">🔄 Refresh</button>
           <select id="heldFilter" onchange="loadHeldBalances()" style="margin-left:10px;padding:6px 10px;border-radius:8px;background:#1a2740;color:white;border:1px solid #2a5298;font-size:13px">
             <option value="">Semua Status</option>
             <option value="held">Tertahan</option>
@@ -402,22 +379,22 @@
 
     <!-- PENGADUAN DETAIL -->
     <div class="section" id="sec-disputedetail">
-      <div class="pageTitle">âš–ï¸ Pengaduan</div>
+      <div class="pageTitle">⚖️ Pengaduan</div>
       <div class="pageSubtitle">Kelola pengaduan dana tertahan dari pengguna</div>
       <div style="background:#1e1a2e;border:1px solid #7c3aed;border-radius:10px;padding:16px;margin-bottom:20px;font-size:13px;color:#ddd6fe;line-height:1.9">
-        <div style="font-weight:700;color:#a78bfa;margin-bottom:8px">ðŸ“‹ Panduan Keputusan Pengaduan</div>
-        <div>ðŸŸ¢ <strong>REFUND</strong> â€” txId tidak ditemukan di server = HP B belum terima dana = dana bisa dikembalikan ke HP A</div>
-        <div>ðŸ”´ <strong>HANGUS</strong> â€” txId ditemukan di server = HP B sudah terima dana = dana tidak bisa dikembalikan</div>
-        <div>ðŸŸ¡ <strong>TUNGGU HP B ONLINE</strong> â€” txId tidak ada tapi HP B belum pernah sync = minta HP A hubungi HP B untuk aktifkan internet</div>
+        <div style="font-weight:700;color:#a78bfa;margin-bottom:8px">📋 Panduan Keputusan Pengaduan</div>
+        <div>🟢 <strong>REFUND</strong> — txId tidak ditemukan di server = HP B belum terima dana = dana bisa dikembalikan ke HP A</div>
+        <div>🔴 <strong>HANGUS</strong> — txId ditemukan di server = HP B sudah terima dana = dana tidak bisa dikembalikan</div>
+        <div>🟡 <strong>TUNGGU HP B ONLINE</strong> — txId tidak ada tapi HP B belum pernah sync = minta HP A hubungi HP B untuk aktifkan internet</div>
         <div style="margin-top:10px;color:#c4b5fd">
-          â° Batas waktu pengaduan <strong>2 minggu</strong> sejak transaksi.<br>
-          ðŸ“Œ Semua keputusan tercatat di Audit Log.
+          ⏰ Batas waktu pengaduan <strong>2 minggu</strong> sejak transaksi.<br>
+          📌 Semua keputusan tercatat di Audit Log.
         </div>
       </div>
       <div class="tableWrap">
         <div class="tableHeader">
           <h3>Daftar Pengaduan</h3>
-          <button class="btnRefresh" onclick="loadDisputeDetail()">ðŸ”„ Refresh</button>
+          <button class="btnRefresh" onclick="loadDisputeDetail()">🔄 Refresh</button>
         </div>
         <div id="disputeDetailTable"><div class="loading">Memuat data...</div></div>
       </div>
@@ -429,7 +406,7 @@
 <!-- MODAL KUNCI PERANGKAT -->
 <div class="modal" id="modalLock">
   <div class="modalBox">
-    <h3>ðŸ”’ Kunci Perangkat</h3>
+    <h3>🔒 Kunci Perangkat</h3>
     <input type="hidden" id="lockDeviceId">
     <div class="formGroup">
       <label>Alasan penguncian:</label>
@@ -449,11 +426,11 @@
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <div>
-        <div style="color:#fff;font-size:16px;font-weight:bold">ðŸ’¬ Pesan Pengaduan</div>
+        <div style="color:#fff;font-size:16px;font-weight:bold">💬 Pesan Pengaduan</div>
         <div style="font-size:12px;color:#94a3b8;margin-top:3px">Nomor: <span id="chatDisputeId" style="color:#7aabf0"></span></div>
       </div>
       <button onclick="document.getElementById('modalDisputeChat').style.display='none'"
-        style="background:transparent;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1">âœ•</button>
+        style="background:transparent;border:none;color:#94a3b8;font-size:22px;cursor:pointer;line-height:1">✕</button>
     </div>
 
     <!-- Pesan -->
@@ -479,7 +456,7 @@
 <!-- MODAL CEK TX DISPUTE -->
 <div class="modal" id="modalCekTx">
   <div class="modalBox" style="max-width:520px">
-    <h3>ðŸ” Detail Transaksi Dispute</h3>
+    <h3>🔍 Detail Transaksi Dispute</h3>
     <div id="cekTxBody"></div>
     <div class="modalActions" style="margin-top:16px">
       <button class="btnCancel" onclick="closeModal('modalCekTx')">Tutup</button>
@@ -490,7 +467,7 @@
 <!-- MODAL DETAIL USER -->
 <div class="modal" id="modalUserDetail">
   <div class="modalBox" style="max-width:620px">
-    <h3>ðŸ‘¤ Histori User: <span id="userDetailName"></span></h3>
+    <h3>👤 Histori User: <span id="userDetailName"></span></h3>
     <div id="userDetailBody"></div>
     <div class="modalActions" style="margin-top:16px">
       <button class="btnCancel" onclick="closeModal('modalUserDetail')">Tutup</button>
@@ -501,7 +478,7 @@
 <!-- MODAL SELESAIKAN DISPUTE -->
 <div class="modal" id="modalDispute">
   <div class="modalBox">
-    <h3>âœ… Selesaikan Laporan</h3>
+    <h3>✅ Selesaikan Laporan</h3>
     <input type="hidden" id="resolveDisputeId">
     <div class="formGroup">
       <label>Keputusan:</label>
@@ -526,7 +503,7 @@
 const API = window.location.origin;
 let token = '';
 
-// â”€â”€â”€ AUTH â”€â”€â”€
+// ─── AUTH ───
 async function doLogin() {
   const u = document.getElementById('loginUser').value;
   const p = document.getElementById('loginPass').value;
@@ -562,7 +539,7 @@ function authHeader() {
   return { 'Content-Type':'application/json', 'Authorization':'Bearer '+token };
 }
 
-// â”€â”€â”€ NAVIGATION â”€â”€â”€
+// ─── NAVIGATION ───
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.navItem').forEach(n => n.classList.remove('active'));
@@ -583,12 +560,12 @@ if(name==='transactions') loadTransactions();
   if(name==='disputedetail')  loadDisputeDetail();
 }
 
-// â”€â”€â”€ FORMAT â”€â”€â”€
+// ─── FORMAT ───
 function fmtRp(n) { return 'Rp '+parseInt(n).toLocaleString('id-ID'); }
 function fmtDate(s) { return new Date(s).toLocaleString('id-ID'); }
 function shortId(s) { return s ? s.substring(0,20)+'...' : '-'; }
 
-// â”€â”€â”€ STATS â”€â”€â”€
+// ─── STATS ───
 async function loadStats() {
   try {
     const r = await fetch(`${API}/admin/stats`, {headers: authHeader()});
@@ -607,7 +584,7 @@ async function loadStats() {
   } catch(e) { console.error(e); }
 }
 
-// â”€â”€â”€ TRANSACTIONS â”€â”€â”€
+// ─── TRANSACTIONS ───
 async function loadTransactions() {
   document.getElementById('txTable').innerHTML = '<div class="loading">Memuat...</div>';
   try {
@@ -626,10 +603,10 @@ async function loadTransactions() {
         <td>${fmtRp(t.amount)}</td>
         <td>${fmtDate(t.created_at)}</td>
         <td style="font-size:11px">${(() => {
-          if (!t.last_seen_at) return '<span style="color:#7AABF0">â€”</span>';
+          if (!t.last_seen_at) return '<span style="color:#7AABF0">—</span>';
           const diff = Math.floor((new Date(t.created_at) - new Date(t.last_seen_at)) / 1000);
-          if (Math.abs(diff) < 300) return '<span style="color:#4ade80">ðŸŸ¢ Online</span>';
-          return '<span style="color:#6b7280">âš« Offline</span>';
+          if (Math.abs(diff) < 300) return '<span style="color:#4ade80">🟢 Online</span>';
+          return '<span style="color:#6b7280">⚫ Offline</span>';
         })()}</td>
       </tr>`;
     });
@@ -638,7 +615,7 @@ async function loadTransactions() {
   } catch(e) { document.getElementById('txTable').innerHTML = '<div class="noData">Gagal memuat data</div>'; }
 }
 
-// â”€â”€â”€ DEVICES â”€â”€â”€
+// ─── DEVICES ───
 async function loadDevices() {
   document.getElementById('devTable').innerHTML = '<div class="loading">Memuat...</div>';
   try {
@@ -649,7 +626,7 @@ async function loadDevices() {
       return;
     }
     let html = '<table><thead><tr><th>Device ID</th><th>Nama</th><th>Model HP</th><th>Tx Count</th><th>Status</th><th>Alasan</th><th>Terdaftar</th><th>Aksi</th></tr></thead><tbody>';
-    const registered = d.devices.filter(dev => dev.full_name && dev.full_name !== 'â€”');
+    const registered = d.devices.filter(dev => dev.full_name && dev.full_name !== '—');
     if (registered.length === 0) {
       document.getElementById('devTable').innerHTML = '<div class="noData">Belum ada perangkat terdaftar</div>';
       return;
@@ -658,7 +635,7 @@ async function loadDevices() {
       html += `<tr>
         <td style="font-size:11px;word-break:break-all;max-width:180px;">${dev.device_id}</td>
         <td>${dev.full_name}</td>
-        <td style="font-size:12px;color:#7AABF0">${dev.manufacturer||'â€”'} ${dev.device_model||'â€”'}</td>
+        <td style="font-size:12px;color:#7AABF0">${dev.manufacturer||'—'} ${dev.device_model||'—'}</td>
         <td style="text-align:center">${dev.tx_count}</td>
         <td><span class="badge ${dev.status}">${dev.status}</span></td>
         <td style="color:#7AABF0;font-size:12px">${dev.reason||'-'}</td>
@@ -706,7 +683,7 @@ async function unlockDevice(deviceId) {
   } catch(e) { alert('Gagal membuka kunci'); }
 }
 
-// â”€â”€â”€ DISPUTES â”€â”€â”€
+// ─── DISPUTES ───
 async function loadDisputes() {
   document.getElementById('dispTable').innerHTML = '<div class="loading">Memuat...</div>';
   try {
@@ -727,7 +704,7 @@ async function loadDisputes() {
         <td style="color:#7AABF0;font-size:12px">${dp.admin_note||'-'}</td>
         <td>${fmtDate(dp.created_at)}</td>
         <td>
-          <button class="btnSm" style="background:#0e4f8f" onclick="cekTx(${dp.id})">ðŸ” Cek TX</button>
+          <button class="btnSm" style="background:#0e4f8f" onclick="cekTx(${dp.id})">🔍 Cek TX</button>
           ${dp.status==='pending'
             ? `<br><button class="btnSm btnResolve" style="margin-top:4px" onclick="openResolve(${dp.id})">Selesaikan</button>`
             : ''
@@ -753,54 +730,54 @@ async function cekTx(disputeId) {
 
     let html = `
       <div style="margin-bottom:12px">
-        <div style="color:#7AABF0;font-size:11px;margin-bottom:4px">ðŸŽ« TIKET</div>
+        <div style="color:#7AABF0;font-size:11px;margin-bottom:4px">🎫 TIKET</div>
         <div style="color:#fff;font-weight:bold">${disp.ticket_number || 'ADU-'+disp.id}</div>
       </div>
       <div style="margin-bottom:12px">
-        <div style="color:#7AABF0;font-size:11px;margin-bottom:4px">ðŸ“‹ DESKRIPSI PELAPOR</div>
+        <div style="color:#7AABF0;font-size:11px;margin-bottom:4px">📋 DESKRIPSI PELAPOR</div>
         <div style="color:#fff;font-size:13px">${disp.description || '-'}</div>
       </div>`;
 
     if (!tx) {
       html += `<div style="color:#f87171;padding:12px;background:rgba(248,113,113,0.1);border-radius:8px">
-        âš ï¸ TX ID tidak ditemukan di server â€” HP penerima belum pernah sync ke server
+        ⚠️ TX ID tidak ditemukan di server — HP penerima belum pernah sync ke server
       </div>`;
     } else {
       const saldo = d.senderBalance;
       const rsaldo = d.receiverBalance;
       html += `
         <div style="background:#0d2137;border-radius:10px;padding:14px;margin-bottom:10px">
-          <div style="color:#7AABF0;font-size:11px;margin-bottom:8px">ðŸ’° DATA TRANSAKSI</div>
+          <div style="color:#7AABF0;font-size:11px;margin-bottom:8px">💰 DATA TRANSAKSI</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
             <div><span style="color:#7AABF0">Nominal:</span><br><span style="color:#4ade80;font-weight:bold">${fmtRp(tx.amount)}</span></div>
             <div><span style="color:#7AABF0">Status TX:</span><br><span style="color:#fff">${tx.status}</span></div>
             <div><span style="color:#7AABF0">Pengirim:</span><br><span style="color:#fff" title="${tx.sender_id}">${tx.sender_id.substring(0,20)}...</span></div>
             <div><span style="color:#7AABF0">Penerima:</span><br><span style="color:#fff" title="${tx.receiver_id}">${tx.receiver_id.substring(0,20)}...</span></div>
-            <div><span style="color:#7AABF0">Saldo Pengirim:</span><br><span style="color:#fff">${saldo ? fmtRp(saldo.balance) : 'âŒ Belum sync'}</span></div>
-            <div><span style="color:#7AABF0">Saldo Penerima:</span><br><span style="color:#fff">${rsaldo ? fmtRp(rsaldo.balance) : 'âŒ Belum sync'}</span></div>
+            <div><span style="color:#7AABF0">Saldo Pengirim:</span><br><span style="color:#fff">${saldo ? fmtRp(saldo.balance) : '❌ Belum sync'}</span></div>
+            <div><span style="color:#7AABF0">Saldo Penerima:</span><br><span style="color:#fff">${rsaldo ? fmtRp(rsaldo.balance) : '❌ Belum sync'}</span></div>
           </div>
         </div>`;
 
       if (held) {
         html += `
           <div style="background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.3);border-radius:10px;padding:12px;margin-bottom:10px;font-size:12px">
-            ðŸ”’ <span style="color:#fb923c;font-weight:bold">Dana Tertahan: ${fmtRp(held.amount)}</span>
+            🔒 <span style="color:#fb923c;font-weight:bold">Dana Tertahan: ${fmtRp(held.amount)}</span>
             <span style="color:#7AABF0;margin-left:8px">Status: ${held.status}</span>
           </div>`;
       } else {
         html += `<div style="background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);border-radius:10px;padding:12px;margin-bottom:10px;font-size:12px">
-          âœ… <span style="color:#4ade80">Tidak ada dana tertahan di server untuk TX ini</span>
+          ✅ <span style="color:#4ade80">Tidak ada dana tertahan di server untuk TX ini</span>
         </div>`;
       }
     }
 
     if (events.length > 0) {
-      html += `<div style="color:#7AABF0;font-size:11px;margin-bottom:6px">ðŸ“œ RIWAYAT EVENT (${events.length})</div>`;
+      html += `<div style="color:#7AABF0;font-size:11px;margin-bottom:6px">📜 RIWAYAT EVENT (${events.length})</div>`;
       html += `<div style="max-height:150px;overflow-y:auto">`;
       events.forEach(ev => {
         html += `<div style="font-size:11px;color:#9ca3af;padding:4px 0;border-bottom:1px solid #1e3a5f">
-          ${fmtDate(ev.created_at)} â€” <span style="color:#7AABF0">${ev.event_type}</span>
-          â€” ${ev.device_id.substring(0,16)}...
+          ${fmtDate(ev.created_at)} — <span style="color:#7AABF0">${ev.event_type}</span>
+          — ${ev.device_id.substring(0,16)}...
         </div>`;
       });
       html += `</div>`;
@@ -835,7 +812,7 @@ async function confirmResolve() {
   } catch(e) { alert('Gagal menyimpan keputusan'); }
 }
 
-// â”€â”€â”€ FEES â”€â”€â”€
+// ─── FEES ───
 async function loadFees() {
   document.getElementById('feeTable').innerHTML = '<div class="loading">Memuat...</div>';
   try {
@@ -864,13 +841,13 @@ async function loadFees() {
   } catch(e) { document.getElementById('feeTable').innerHTML = '<div class="noData">Gagal memuat data</div>'; }
 }
 
-// â”€â”€â”€ MODAL â”€â”€â”€
+// ─── MODAL ───
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 window.onclick = (e) => {
   if(e.target.classList.contains('modal')) e.target.classList.remove('show');
 };
 
-// â”€â”€â”€ INIT â”€â”€â”€
+// ─── INIT ───
 // Cek apakah sudah login via cookie
 fetch('/admin/stats', { credentials: 'include' })
   .then(r => {
@@ -881,9 +858,9 @@ fetch('/admin/stats', { credentials: 'include' })
     }
   }).catch(() => {});
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // HELPER: apiFetch
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 async function apiFetch(url, method = 'GET', body = null) {
   const opts = {
     method,
@@ -902,9 +879,9 @@ async function apiFetch(url, method = 'GET', body = null) {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // KYC & PENGGUNA
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 async function loadKyc() {
   document.getElementById('kycTable').innerHTML = '<div class="loading">Memuat data...</div>';
   const rows = await apiFetch('/admin/api/users/list');
@@ -913,7 +890,7 @@ async function loadKyc() {
     return;
   }
   
-  const registered = rows.filter(r => r.full_name && r.full_name.trim() !== '' && r.full_name !== 'â€”');
+  const registered = rows.filter(r => r.full_name && r.full_name.trim() !== '' && r.full_name !== '—');
   document.getElementById('kyc-total').textContent    = registered.length;
   document.getElementById('kyc-verified').textContent = registered.filter(x => x.kyc_status === 'verified').length;
   document.getElementById('kyc-pending').textContent  = registered.filter(x => !x.kyc_status || x.kyc_status === 'unverified').length;
@@ -940,22 +917,22 @@ async function loadKyc() {
         ${rows.map(u => `
           <tr>
             <td style="font-size:11px;word-break:break-all;max-width:180px;">${u.device_id}</td>
-            <td>${u.full_name || 'â€”'}</td>
-            <td>${u.phone || 'â€”'}</td>
+            <td>${u.full_name || '—'}</td>
+            <td>${u.phone || '—'}</td>
             <td>Rp ${Number(u.balance || 0).toLocaleString('id-ID')}</td>
             <td>
               <span style="color:${
                 u.kyc_status === 'verified'  ? '#4ade80' :
                 u.kyc_status === 'rejected'  ? '#f87171' : '#fbbf24'
               }">
-                ${u.kyc_status === 'verified' ? 'âœ… Verified' :
-                  u.kyc_status === 'rejected' ? 'âŒ Rejected' : 'â³ Pending'}
+                ${u.kyc_status === 'verified' ? '✅ Verified' :
+                  u.kyc_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
               </span>
             </td>
             <td style="font-size:11px">${(() => {
-              if (!u.last_seen_at) return 'â€”';
+              if (!u.last_seen_at) return '—';
               const diff = Math.floor((Date.now() - new Date(u.last_seen_at)) / 1000);
-              if (diff < 60) return '<span style="color:#4ade80">ðŸŸ¢ Online</span>';
+              if (diff < 60) return '<span style="color:#4ade80">🟢 Online</span>';
               if (diff < 3600) return `${Math.floor(diff/60)} mnt lalu`;
               if (diff < 86400) return `${Math.floor(diff/3600)} jam lalu`;
               return `${Math.floor(diff/86400)} hari lalu`;
@@ -965,18 +942,18 @@ async function loadKyc() {
             <td>
               <button onclick="kycAction('${u.device_id}','approve')"
                 style="background:#166534;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:12px">
-                âœ… Approve
+                ✅ Approve
               </button>
               <button onclick="kycAction('${u.device_id}','reject')"
                 style="background:#7f1d1d;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">
-                âŒ Reject
+                ❌ Reject
               </button>
               <button onclick="topupUser('${u.device_id}','${u.full_name || u.device_id.substring(0,12)}')"
                 style="background:#1d4ed8;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:4px;font-size:12px">
-                ðŸ’° Topup
-              <button onclick="viewUserDetail('${u.device_id}','${u.full_name || 'â€”'}')"
+                💰 Topup
+              <button onclick="viewUserDetail('${u.device_id}','${u.full_name || '—'}')"
                 style="background:#0e4f8f;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:4px;font-size:12px">
-                ðŸ” Histori
+                🔍 Histori
               </button>                
             </td>
           </tr>
@@ -1010,14 +987,14 @@ async function viewUserDetail(deviceId, nama) {
         </div>
         <div style="background:#0d2137;border-radius:8px;padding:10px;text-align:center">
           <div style="color:#7AABF0;font-size:11px">No HP</div>
-          <div style="color:#fff;font-size:12px">${d.user?.phone||'â€”'}</div>
+          <div style="color:#fff;font-size:12px">${d.user?.phone||'—'}</div>
         </div>
       </div>`;
 
     if (allTx.length === 0) {
       html += '<div style="color:#6b7280;text-align:center;padding:20px">Belum ada transaksi</div>';
     } else {
-      html += `<div style="color:#7AABF0;font-size:11px;margin-bottom:6px">ðŸ“‹ HISTORI TRANSAKSI (${allTx.length})</div>`;
+      html += `<div style="color:#7AABF0;font-size:11px;margin-bottom:6px">📋 HISTORI TRANSAKSI (${allTx.length})</div>`;
       html += '<div style="max-height:300px;overflow-y:auto">';
       html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
       html += '<thead><tr style="color:#7AABF0;border-bottom:1px solid #1e3a5f"><th style="padding:6px;text-align:left">TX ID</th><th>Arah</th><th>Nominal</th><th>Lawan</th><th>Waktu</th></tr></thead><tbody>';
@@ -1025,7 +1002,7 @@ async function viewUserDetail(deviceId, nama) {
         const lawan = t.arah === 'KIRIM' ? t.receiver_id : t.sender_id;
         html += `<tr style="border-bottom:1px solid #0d2137">
           <td style="padding:5px;color:#9ca3af" title="${t.tx_id}">${t.tx_id.substring(0,18)}...</td>
-          <td style="text-align:center"><span style="color:${t.arah==='KIRIM'?'#f87171':'#4ade80'}">${t.arah==='KIRIM'?'â†‘ Kirim':'â†“ Terima'}</span></td>
+          <td style="text-align:center"><span style="color:${t.arah==='KIRIM'?'#f87171':'#4ade80'}">${t.arah==='KIRIM'?'↑ Kirim':'↓ Terima'}</span></td>
           <td style="text-align:right;color:#fff">${fmtRp(t.amount)}</td>
           <td style="color:#9ca3af" title="${lawan}">${lawan.substring(0,14)}...</td>
           <td style="color:#6b7280">${new Date(t.created_at).toLocaleDateString('id-ID')}</td>
@@ -1035,7 +1012,7 @@ async function viewUserDetail(deviceId, nama) {
     }
 
     if (d.heldBalances.length > 0) {
-      html += `<div style="color:#fb923c;font-size:11px;margin:12px 0 6px">ðŸ”’ DANA TERTAHAN (${d.heldBalances.length})</div>`;
+      html += `<div style="color:#fb923c;font-size:11px;margin:12px 0 6px">🔒 DANA TERTAHAN (${d.heldBalances.length})</div>`;
       html += '<div style="max-height:150px;overflow-y:auto">';
       d.heldBalances.forEach(h => {
         html += `<div style="font-size:12px;padding:5px 0;border-bottom:1px solid #0d2137;display:flex;justify-content:space-between">
@@ -1073,16 +1050,16 @@ async function topupUser(deviceId, nama) {
   if (!confirm(`Tambah saldo Rp ${amount.toLocaleString('id-ID')} untuk ${nama}?`)) return;
   const result = await apiFetch('/admin/api/users/topup', 'POST', { deviceId, amount });
   if (result && result.success) {
-    alert(`âœ… Berhasil topup Rp ${amount.toLocaleString('id-ID')} untuk ${nama}`);
+    alert(`✅ Berhasil topup Rp ${amount.toLocaleString('id-ID')} untuk ${nama}`);
     loadKyc();
   } else {
     alert('Gagal: ' + (result ? result.error : 'koneksi error'));
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // AML & ANOMALI
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 async function loadAml() {
   document.getElementById('amlTable').innerHTML = '<div class="loading">Memuat data...</div>';
   const [stats, alerts] = await Promise.all([
@@ -1119,11 +1096,11 @@ async function loadAml() {
             <td>
               <button onclick="amlHandle(${a.id},'resolved')"
                 style="background:#166534;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:12px">
-                âœ… Selesai
+                ✅ Selesai
               </button>
               <button onclick="amlHandle(${a.id},'dismissed')"
                 style="background:#374151;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px">
-                ðŸš« Abaikan
+                🚫 Abaikan
               </button>
             </td>
           </tr>
@@ -1141,9 +1118,9 @@ async function amlHandle(alertId, action) {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // REKONSILIASI
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 async function loadReconciliation() {
   document.getElementById('recTable').innerHTML = '<div class="loading">Memuat data...</div>';
   const s = await apiFetch('/admin/api/reconciliation/summary');
@@ -1155,7 +1132,7 @@ async function loadReconciliation() {
   }
   document.getElementById('recTable').innerHTML = `
     <div style="padding:20px;color:#94a3b8;line-height:1.8;font-size:14px">
-      <p>ðŸ“Œ <strong style="color:#e2e8f0">Cara kerja rekonsiliasi OFFLINK:</strong></p>
+      <p>📌 <strong style="color:#e2e8f0">Cara kerja rekonsiliasi OFFLINK:</strong></p>
       <p>1. Transaksi terjadi secara offline di antara dua HP tanpa internet.</p>
       <p>2. Saat HP online, transaksi di-sync ke server melalui endpoint <code>/tx/sync</code>.</p>
       <p>3. Server memverifikasi: device terdaftar, tidak diblokir, txId belum pernah dipakai, dan saldo mencukupi.</p>
@@ -1164,9 +1141,9 @@ async function loadReconciliation() {
     </div>`;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // AUDIT LOG
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 async function loadAuditLog() {
   document.getElementById('auditTable').innerHTML = '<div class="loading">Memuat data...</div>';
   const rows = await apiFetch('/admin/api/audit-logs?limit=100');
@@ -1185,9 +1162,9 @@ async function loadAuditLog() {
             <td>${l.id}</td>
             <td>${l.admin_user}</td>
             <td>${l.action}</td>
-            <td>${l.target || 'â€”'}</td>
-            <td>${l.detail ? (l.detail.amount ? 'Rp '+Number(l.detail.amount).toLocaleString('id-ID') : JSON.stringify(l.detail)) : 'â€”'}</td>
-            <td>${l.ip_address || 'â€”'}</td>
+            <td>${l.target || '—'}</td>
+            <td>${l.detail ? (l.detail.amount ? 'Rp '+Number(l.detail.amount).toLocaleString('id-ID') : JSON.stringify(l.detail)) : '—'}</td>
+            <td>${l.ip_address || '—'}</td>
             <td style="font-size:12px">${new Date(l.created_at).toLocaleString('id-ID')}</td>
           </tr>
         `).join('')}
@@ -1195,24 +1172,24 @@ async function loadAuditLog() {
     </table>`;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // SYSTEM HEALTH
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 async function loadHealth() {
-  document.getElementById('h-server').textContent  = 'â³ Memeriksa...';
-  document.getElementById('h-db').textContent      = 'â³ Memeriksa...';
-  document.getElementById('h-latency').textContent = 'â€”';
-  document.getElementById('h-uptime').textContent  = 'â€”';
-  document.getElementById('h-time').textContent    = 'â€”';
+  document.getElementById('h-server').textContent  = '⏳ Memeriksa...';
+  document.getElementById('h-db').textContent      = '⏳ Memeriksa...';
+  document.getElementById('h-latency').textContent = '—';
+  document.getElementById('h-uptime').textContent  = '—';
+  document.getElementById('h-time').textContent    = '—';
 
   const h = await apiFetch('/admin/api/health');
   if (!h) {
-    document.getElementById('h-server').textContent = 'ðŸ”´ Error';
+    document.getElementById('h-server').textContent = '🔴 Error';
     return;
   }
-  document.getElementById('h-server').textContent  = h.server === 'online'      ? 'ðŸŸ¢ Online'    : 'ðŸ”´ Offline';
-  document.getElementById('h-db').textContent      = h.database === 'connected' ? 'ðŸŸ¢ Connected' : 'ðŸ”´ Error';
-  document.getElementById('h-latency').textContent = (h.db_latency_ms ?? 'â€”') + ' ms';
+  document.getElementById('h-server').textContent  = h.server === 'online'      ? '🟢 Online'    : '🔴 Offline';
+  document.getElementById('h-db').textContent      = h.database === 'connected' ? '🟢 Connected' : '🔴 Error';
+  document.getElementById('h-latency').textContent = (h.db_latency_ms ?? '—') + ' ms';
 
   const up = h.uptime_seconds || 0;
   const jam   = Math.floor(up / 3600);
@@ -1222,9 +1199,9 @@ async function loadHealth() {
   document.getElementById('h-time').textContent   = new Date(h.timestamp).toLocaleString('id-ID');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // PENGATURAN SISTEM
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 async function loadConfig() {
   loadMaintenanceStatus();
   document.getElementById('configTable').innerHTML = '<div class="loading">Memuat konfigurasi...</div>';
@@ -1243,7 +1220,7 @@ async function loadConfig() {
           <tr>
             <td><code style="color:#93c5fd">${c.key}</code></td>
             <td>${c.value}</td>
-            <td>${c.updated_by || 'â€”'}</td>
+            <td>${c.updated_by || '—'}</td>
             <td style="font-size:12px">${new Date(c.updated_at).toLocaleString('id-ID')}</td>
           </tr>
         `).join('')}
@@ -1255,7 +1232,7 @@ async function loadMaintenanceStatus() {
   const r = await apiFetch('/admin/api/maintenance');
   if (!r) return;
   const on = r.maintenance;
-  document.getElementById('maintenanceStatus').textContent = on ? 'ðŸ”´ AKTIF' : 'ðŸŸ¢ Nonaktif';
+  document.getElementById('maintenanceStatus').textContent = on ? '🔴 AKTIF' : '🟢 Nonaktif';
   document.getElementById('maintenanceStatus').style.color = on ? '#f87171' : '#4ade80';
   document.getElementById('maintenanceBtn').textContent = on ? 'Matikan' : 'Aktifkan';
   document.getElementById('maintenanceBtn').style.background = on ? '#7f1d1d' : '#166534';
@@ -1292,9 +1269,9 @@ async function saveConfig() {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // EXPORT CSV
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 function exportCSV(type) {
   const url = type === 'transactions'
     ? '/admin/export/transactions/csv'
@@ -1304,9 +1281,9 @@ function exportCSV(type) {
   window.location.href = '/admin/export/report/pdf';
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // HISTORY TRANSAKSI DETAIL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 async function loadTxDetail() {
   const deviceId = document.getElementById('txDetailDeviceId').value.trim();
   document.getElementById('txDetailTable').innerHTML = '<div class="loading">Memuat data...</div>';
@@ -1335,11 +1312,11 @@ async function loadTxDetail() {
           <tr>
             <td style="font-size:11px">${t.tx_id.substring(0,20)}...</td>
             <td>
-              <div>${t.sender_name || 'â€”'}</div>
+              <div>${t.sender_name || '—'}</div>
               <div style="font-size:10px;color:#94a3b8">${t.sender_phone || ''}</div>
             </td>
             <td>
-              <div>${t.receiver_name || 'â€”'}</div>
+              <div>${t.receiver_name || '—'}</div>
               <div style="font-size:10px;color:#94a3b8">${t.receiver_phone || ''}</div>
             </td>
             <td>Rp ${Number(t.amount).toLocaleString('id-ID')}</td>
@@ -1348,8 +1325,8 @@ async function loadTxDetail() {
                 t.flow_status === 'synced'   ? '#4ade80' :
                 t.flow_status === 'pending'  ? '#fbbf24' : '#f87171'
               }">
-                ${t.flow_status === 'synced'  ? 'âœ… Tersync' :
-                  t.flow_status === 'pending' ? 'â³ Pending' : 'âŒ Gagal'}
+                ${t.flow_status === 'synced'  ? '✅ Tersync' :
+                  t.flow_status === 'pending' ? '⏳ Pending' : '❌ Gagal'}
               </span>
               ${t.notes ? `<div style="font-size:11px;color:#94a3b8">${t.notes}</div>` : ''}
             </td>
@@ -1359,9 +1336,9 @@ async function loadTxDetail() {
       </tbody>
     </table>`;
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // DANA TERTAHAN
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 async function loadHeldBalances() {
   document.getElementById('heldTable').innerHTML = '<div class="loading">Memuat data...</div>';
   const filter = document.getElementById('heldFilter')?.value || '';
@@ -1380,29 +1357,29 @@ async function loadHeldBalances() {
         ${rows.map(h => `
           <tr>
             <td style="font-size:11px;word-break:break-all;">${h.tx_id}</td>
-            <td>${h.full_name || 'â€”'}</td>
-            <td>${h.phone || 'â€”'}</td>
+            <td>${h.full_name || '—'}</td>
+            <td>${h.phone || '—'}</td>
             <td>Rp ${Number(h.amount).toLocaleString('id-ID')}</td>
             <td><span style="color:${
               h.status === 'released' ? '#4ade80' :
               h.status === 'refunded' ? '#60a5fa' :
               h.status === 'hangus'   ? '#f87171' : '#fbbf24'
             }">
-              ${h.status === 'released' ? 'âœ… Selesai' :
-                h.status === 'refunded' ? 'â†©ï¸ Direfund' :
-                h.status === 'hangus'   ? 'âŒ Hangus' : 'ðŸ”’ Tertahan'}
+              ${h.status === 'released' ? '✅ Selesai' :
+                h.status === 'refunded' ? '↩️ Direfund' :
+                h.status === 'hangus'   ? '❌ Hangus' : '🔒 Tertahan'}
             </span></td>
             <td style="font-size:12px">${new Date(h.created_at).toLocaleString('id-ID')}</td>
-            <td style="font-size:12px">${h.resolved_at ? new Date(h.resolved_at).toLocaleString('id-ID') : 'â€”'}</td>
+            <td style="font-size:12px">${h.resolved_at ? new Date(h.resolved_at).toLocaleString('id-ID') : '—'}</td>
           </tr>
         `).join('')}
       </tbody>
     </table>`;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // PENGADUAN DETAIL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 async function loadDisputeDetail() {
   document.getElementById('disputeDetailTable').innerHTML = '<div class="loading">Memuat data...</div>';
   const rows = await apiFetch('/admin/api/disputes/detail');
@@ -1414,22 +1391,22 @@ async function loadDisputeDetail() {
   for (const d of rows) {
     const snapshot = d.tx_events_snapshot ? JSON.parse(d.tx_events_snapshot) : [];
     const lastEvent = snapshot.length > 0 ? snapshot[snapshot.length-1] : null;
-    const rec = (lastEvent && lastEvent.recommendation) ? lastEvent.recommendation : 'â€”';
+    const rec = (lastEvent && lastEvent.recommendation) ? lastEvent.recommendation : '—';
     const recColor = rec === 'REFUND' ? '#4ade80' : rec === 'HANGUS' ? '#f87171' : '#fbbf24';
     const statusColor = d.status === 'resolved_refund' ? '#4ade80' : d.status === 'hangus' ? '#f87171' : d.status === 'open' ? '#fbbf24' : '#94a3b8';
-    const statusLabel = d.status === 'resolved_refund' ? 'âœ… Direfund' : d.status === 'hangus' ? 'âŒ Hangus' : d.status === 'open' ? 'â³ Menunggu' : d.status;
-    const deadline = d.deadline_at ? new Date(d.deadline_at).toLocaleDateString('id-ID') : 'â€”';
-    const txShort = d.tx_id || 'â€”';
+    const statusLabel = d.status === 'resolved_refund' ? '✅ Direfund' : d.status === 'hangus' ? '❌ Hangus' : d.status === 'open' ? '⏳ Menunggu' : d.status;
+    const deadline = d.deadline_at ? new Date(d.deadline_at).toLocaleDateString('id-ID') : '—';
+    const txShort = d.tx_id || '—';
     const ticketNum = d.ticket_number || ('ADU-' + d.id);
-    const chatBtn = '<button onclick="openDisputeChat(' + d.id + ',\'' + ticketNum + '\')" style="background:#1e3a5f;color:#7aabf0;border:1px solid #2a5298;padding:4px 8px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:11px;display:inline-block;margin-bottom:4px">ðŸ’¬ Pesan</button>';
+    const chatBtn = '<button onclick="openDisputeChat(' + d.id + ',\'' + ticketNum + '\')" style="background:#1e3a5f;color:#7aabf0;border:1px solid #2a5298;padding:4px 8px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:11px;display:inline-block;margin-bottom:4px">💬 Pesan</button>';
     const aksi = chatBtn + (d.status === 'open'
-      ? '<button onclick="resolveDispute(' + d.id + ',\'resolved_refund\')" style="background:#166534;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:11px">â†©ï¸ Refund</button><button onclick="resolveDispute(' + d.id + ',\'hangus\')" style="background:#7f1d1d;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:11px">âŒ Hangus</button>'
+      ? '<button onclick="resolveDispute(' + d.id + ',\'resolved_refund\')" style="background:#166534;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;margin-right:4px;font-size:11px">↩️ Refund</button><button onclick="resolveDispute(' + d.id + ',\'hangus\')" style="background:#7f1d1d;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:11px">❌ Hangus</button>'
       : '');
     tbody += '<tr>';
     tbody += '<td>' + d.id + '</td>';
-    tbody += '<td><div>' + (d.reporter_name || 'â€”') + '</div><div style="font-size:10px;color:#94a3b8">' + (d.reporter_phone || '') + '</div></td>';
+    tbody += '<td><div>' + (d.reporter_name || '—') + '</div><div style="font-size:10px;color:#94a3b8">' + (d.reporter_phone || '') + '</div></td>';
     tbody += '<td style="font-size:11px;word-break:break-all;">' + txShort + '</td>';
-    tbody += '<td>' + (d.issue_type || 'â€”') + '</td>';
+    tbody += '<td>' + (d.issue_type || '—') + '</td>';
     tbody += '<td><span style="color:' + recColor + '">' + rec + '</span></td>';
     tbody += '<td><span style="color:' + statusColor + '">' + statusLabel + '</span></td>';
     tbody += '<td style="font-size:12px">' + deadline + '</td>';
@@ -1440,9 +1417,9 @@ async function loadDisputeDetail() {
     '<table class="dataTable"><thead><tr><th>ID</th><th>Pelapor</th><th>TX ID</th><th>Tipe</th><th>Rekomendasi</th><th>Status</th><th>Deadline</th><th>Aksi</th></tr></thead><tbody>' + tbody + '</tbody></table>';
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// DISPUTE CHAT â€” ADMIN
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
+// DISPUTE CHAT — ADMIN
+// ══════════════════════════════════════════
 let _activeChatId = null;
 
 async function openDisputeChat(disputeId, ticketNumber) {
@@ -1465,7 +1442,7 @@ async function loadDisputeMessages(disputeId) {
     const time = new Date(m.created_at).toLocaleString('id-ID');
     return `
       <div style="display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-end' : 'flex-start'};margin-bottom:12px">
-        <div style="font-size:10px;color:#94a3b8;margin-bottom:3px">${isAdmin ? 'Admin' : 'User'} Â· ${time}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-bottom:3px">${isAdmin ? 'Admin' : 'User'} · ${time}</div>
         <div style="
           max-width:75%;
           padding:10px 14px;
@@ -1539,7 +1516,7 @@ async function resolveDispute(disputeId, decision) {
   }
 }
 
-// â”€â”€ Auto-refresh setiap 15 detik â”€â”€
+// ── Auto-refresh setiap 15 detik ──
 window._activeSection = 'overview';
 const _origShow = showSection;
 showSection = function(name) {
@@ -1559,17 +1536,5 @@ setInterval(() => {
   if (fn) fn();
 }, 120000);
 </script>
-<script>
-      }
-    }
-  });
-  document.getElementById('kycLegend').innerHTML =
-    `<div><span style="color:#4ade80">â—</span> Terverifikasi : <b>${verified}</b></div>
-     <div><span style="color:#fbbf24">â—</span> Belum Verifikasi : <b>${pending}</b></div>`;
-}
-</script>
 </body>
 </html>
-
-
-
