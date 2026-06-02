@@ -1343,6 +1343,108 @@ app.get('/admin/export/report/pdf', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// ADMIN — MONITORING DASHBOARD
+// ─────────────────────────────────────────────
+app.get('/admin/monitoring', verifyAdmin, async (req, res) => {
+  try {
+    const [held, fraud, syncErr, txTotal, health] = await Promise.all([
+      pool.query(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as total FROM held_balances WHERE status = 'held'`),
+      pool.query(`SELECT COUNT(*) as cnt FROM aml_alerts WHERE status = 'open'`),
+      pool.query(`SELECT COUNT(*) as cnt FROM disputes WHERE status = 'pending'`),
+      pool.query(`SELECT COUNT(*) as cnt FROM transactions`),
+      pool.query(`SELECT 1`),
+    ]);
+
+    const metrics = await promRegister.getMetricsAsJSON();
+    const txCounter = metrics.find(m => m.name === 'offlink_tx_total');
+    const syncErrCounter = metrics.find(m => m.name === 'offlink_sync_errors_total');
+    const fraudCounter = metrics.find(m => m.name === 'offlink_fraud_total');
+    const httpHist = metrics.find(m => m.name === 'offlink_http_duration_seconds');
+
+    const txSinceRestart = txCounter?.values?.reduce((a, b) => a + (b.value || 0), 0) || 0;
+    const syncErrSinceRestart = syncErrCounter?.values?.[0]?.value || 0;
+    const fraudSinceRestart = fraudCounter?.values?.[0]?.value || 0;
+
+    // Hitung rata-rata durasi dari histogram
+    let avgDuration = '–';
+    if (httpHist?.values) {
+      const sumVal = httpHist.values.find(v => v.metricName === 'offlink_http_duration_seconds_sum');
+      const cntVal = httpHist.values.find(v => v.metricName === 'offlink_http_duration_seconds_count');
+      if (sumVal && cntVal && cntVal.value > 0) {
+        avgDuration = ((sumVal.value / cntVal.value) * 1000).toFixed(0) + ' ms';
+      }
+    }
+
+    res.send(`<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="30">
+<title>Monitoring – Offlink</title>
+<style>
+  body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #f8fafc; }
+  .sub { font-size: 12px; color: #64748b; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  .card { background: #1e293b; border-radius: 10px; padding: 20px; }
+  .card .label { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+  .card .value { font-size: 28px; font-weight: bold; color: #f1f5f9; }
+  .card .sub2 { font-size: 11px; color: #64748b; margin-top: 4px; }
+  .red .value { color: #f87171; }
+  .yellow .value { color: #fbbf24; }
+  .green .value { color: #34d399; }
+  .back { display: inline-block; margin-bottom: 16px; font-size: 13px; color: #60a5fa; text-decoration: none; }
+</style>
+</head>
+<body>
+<a href="/admin" class="back">← Kembali ke Dashboard</a>
+<h1>📊 Monitoring Sistem</h1>
+<p class="sub">Auto-refresh setiap 30 detik &nbsp;|&nbsp; ${new Date().toLocaleString('id-ID')}</p>
+<div class="grid">
+  <div class="card green">
+    <div class="label">Total Transaksi</div>
+    <div class="value">${parseInt(txTotal.rows[0].cnt).toLocaleString('id-ID')}</div>
+    <div class="sub2">Sejak server restart: +${txSinceRestart}</div>
+  </div>
+  <div class="card ${parseInt(held.rows[0].cnt) > 0 ? 'yellow' : 'green'}">
+    <div class="label">Dana Tertahan</div>
+    <div class="value">${parseInt(held.rows[0].cnt)}</div>
+    <div class="sub2">Rp ${parseInt(held.rows[0].total).toLocaleString('id-ID')}</div>
+  </div>
+  <div class="card ${parseInt(fraud.rows[0].cnt) > 0 ? 'red' : 'green'}">
+    <div class="label">Alert AML Terbuka</div>
+    <div class="value">${parseInt(fraud.rows[0].cnt)}</div>
+    <div class="sub2">Inkonsistensi sejak restart: ${fraudSinceRestart}</div>
+  </div>
+  <div class="card ${parseInt(syncErr.rows[0].cnt) > 0 ? 'yellow' : 'green'}">
+    <div class="label">Dispute Pending</div>
+    <div class="value">${parseInt(syncErr.rows[0].cnt)}</div>
+    <div class="sub2">Perlu tindakan admin</div>
+  </div>
+  <div class="card ${syncErrSinceRestart > 0 ? 'red' : 'green'}">
+    <div class="label">Sync Error</div>
+    <div class="value">${syncErrSinceRestart}</div>
+    <div class="sub2">Sejak server restart</div>
+  </div>
+  <div class="card">
+    <div class="label">Avg Response Time</div>
+    <div class="value" style="font-size:22px">${avgDuration}</div>
+    <div class="sub2">Rata-rata semua endpoint</div>
+  </div>
+  <div class="card green">
+    <div class="label">Server</div>
+    <div class="value" style="font-size:18px">✅ Online</div>
+    <div class="sub2">Uptime ${Math.floor(process.uptime() / 60)} menit</div>
+  </div>
+</div>
+</body>
+</html>`);
+  } catch (e) {
+    res.status(500).send('Error: ' + e.message);
+  }
+});
+
+// ─────────────────────────────────────────────
 // AML OTOMATIS
 // ─────────────────────────────────────────────
 async function checkAml(txId, senderId, receiverId, amount) {
