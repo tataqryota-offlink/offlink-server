@@ -1993,6 +1993,63 @@ app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Sinkronisasi saldo dari HP ke server
+app.post('/device/balance/sync', async (req, res) => {
+  const secret = req.headers['x-device-secret'];
+  if (secret !== process.env.DEVICE_SECRET)
+    return res.status(401).json({ error: 'Akses tidak diizinkan' });
+
+  const { deviceId, balance, heldBalance, ledger } = req.body;
+  if (!deviceId || balance === undefined)
+    return res.status(400).json({ error: 'deviceId dan balance wajib diisi' });
+
+  try {
+    // Hitung saldo dari histori ledger yang dikirim HP
+    let calculatedBalance = 0;
+    if (ledger && Array.isArray(ledger)) {
+      for (const tx of ledger) {
+        if (tx.status !== 'CONFIRMED') continue;
+        if (tx.direction === 'RECEIVED') calculatedBalance += tx.amount;
+        if (tx.direction === 'SENT') calculatedBalance -= tx.amount;
+      }
+    }
+
+    // Ambil saldo awal (topup) dari server
+    const deviceResult = await pool.query(
+      'SELECT balance FROM devices WHERE device_id = $1',
+      [deviceId]
+    );
+    
+    // Cek selisih — toleransi 0
+    const sentBalance = parseInt(balance);
+    const diff = Math.abs(sentBalance - calculatedBalance);
+
+    // Kalau selisih > 10% dari saldo — flag anomali
+    if (ledger && Array.isArray(ledger) && ledger.length > 0 && diff > sentBalance * 0.1) {
+      await pool.query(
+        `INSERT INTO aml_alerts (device_id, alert_type, detail, risk_level, status)
+         VALUES ($1, 'BALANCE_ANOMALY', $2, 'high', 'open')`,
+        [deviceId, JSON.stringify({
+          balanceFromHP: sentBalance,
+          balanceCalculated: calculatedBalance,
+          diff,
+          txCount: ledger.length
+        })]
+      );
+    }
+
+    // Update saldo server mengikuti HP
+    await pool.query(
+      `UPDATE devices SET balance = $1, held_balance = $2 WHERE device_id = $3`,
+      [sentBalance, heldBalance ?? 0, deviceId]
+    );
+
+    res.json({ success: true, validated: diff === 0 });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─────────────────────────────────────────────
 // START SERVER
 // ─────────────────────────────────────────────
