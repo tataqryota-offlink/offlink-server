@@ -908,6 +908,7 @@ async function loadKyc() {
           <th>No HP</th>
           <th>Saldo</th>
           <th>Status KYC</th>
+          <th>Status</th>
           <th>Terakhir Online</th>
           <th>Terdaftar</th>
           <th>Aksi</th>
@@ -929,15 +930,20 @@ async function loadKyc() {
                   u.kyc_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
               </span>
             </td>
-            <td style="font-size:11px">${(() => {
+            <td style="text-align:center">${(() => {
+              if (!u.last_seen_at) return '<span style="color:#6b7280">⚫ Offline</span>';
+              const diff = Math.floor((Date.now() - new Date(u.last_seen_at)) / 1000);
+              if (diff < 120) return '<span style="background:#166534;color:#4ade80;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">🟢 ONLINE</span>';
+              return '<span style="background:#1f2937;color:#6b7280;padding:3px 10px;border-radius:12px;font-size:11px">⚫ OFFLINE</span>';
+            })()}</td>
+            <td style="font-size:11px;color:#94a3b8">${(() => {
               if (!u.last_seen_at) return '—';
               const diff = Math.floor((Date.now() - new Date(u.last_seen_at)) / 1000);
-              if (diff < 60) return '<span style="color:#4ade80">🟢 Online</span>';
-              if (diff < 3600) return `${Math.floor(diff/60)} mnt lalu`;
-              if (diff < 86400) return `${Math.floor(diff/3600)} jam lalu`;
-              return `${Math.floor(diff/86400)} hari lalu`;
+              if (diff < 60) return 'Baru saja';
+              if (diff < 3600) return Math.floor(diff/60) + ' mnt lalu';
+              if (diff < 86400) return Math.floor(diff/3600) + ' jam lalu';
+              return Math.floor(diff/86400) + ' hari lalu';
             })()}</td>
-            </td>
             <td style="font-size:12px">${new Date(u.created_at).toLocaleDateString('id-ID')}</td>
             <td>
               <button onclick="kycAction('${u.device_id}','approve')"
@@ -1530,6 +1536,10 @@ const _loaders = {
   fees: loadFees, kyc: loadKyc, aml: loadAml,
   reconciliation: loadReconciliation, heldbalances: loadHeldBalances,
 };
+
+setInterval(() => {
+  if (window._activeSection === 'kyc') loadKyc();
+}, 30000);
 
 setInterval(() => {
   const fn = _loaders[window._activeSection];

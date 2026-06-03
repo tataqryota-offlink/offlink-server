@@ -1,0 +1,24 @@
+{
+  "info": {
+    "waktu_backup": "3/6/2026, 08.15.03",
+    "tanggal": "2026-06-03",
+    "sistem": "OFFLINK Server"
+  },
+  "data": {
+    "devices": [],
+    "transactions": [],
+    "nonces": [],
+    "used_tx_ids": [],
+    "held_balances": [],
+    "blocked_devices": [],
+    "tx_events": [],
+    "device_status": [],
+    "top_up_fees": [],
+    "disputes": [],
+    "dispute_messages": [],
+    "system_config": [],
+    "aml_alerts": [],
+    "audit_logs": [],
+    "users": []
+  }
+}

@@ -1,5 +1,5 @@
 ﻿// ============================================================
-// OFFLINK SERVER – Backend API
+// OFFLINK SERVER â€” Backend API
 // ============================================================
 
 require('dotenv').config();
@@ -23,13 +23,10 @@ const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
 const ed25519 = require('@noble/ed25519');
 const crypto = require('crypto');
-const promClient = require('prom-client');
-const promRegister = new promClient.Registry();
-promRegister.setDefaultLabels({ app: 'offlink' });
 
-// ─────────────────────────────────────────────
-// LOGGER – Winston structured logging
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// LOGGER â€” Winston structured logging
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const winston = require('winston');
 const logger = winston.createLogger({
   level: 'info',
@@ -42,43 +39,6 @@ const logger = winston.createLogger({
   ],
 });
 
-// ─────────────────────────────────────────────
-// I12 — METRICS DEFINITION
-// ─────────────────────────────────────────────
-const metricTxTotal = new promClient.Counter({
-  name: 'offlink_tx_total',
-  help: 'Total transaksi sync masuk',
-  labelNames: ['status'],
-  registers: [promRegister],
-});
-const metricFraud = new promClient.Counter({
-  name: 'offlink_fraud_total',
-  help: 'Total inkonsistensi Dana Tertahan terdeteksi',
-  registers: [promRegister],
-});
-const metricSyncErrors = new promClient.Counter({
-  name: 'offlink_sync_errors_total',
-  help: 'Total error di endpoint sync',
-  registers: [promRegister],
-});
-const metricDanaTertahanCount = new promClient.Gauge({
-  name: 'offlink_dana_tertahan_count',
-  help: 'Jumlah TX dengan Dana Tertahan status held',
-  registers: [promRegister],
-});
-const metricDanaTertahanNominal = new promClient.Gauge({
-  name: 'offlink_dana_tertahan_nominal',
-  help: 'Total nominal Dana Tertahan (Rp) status held',
-  registers: [promRegister],
-});
-const metricHttpDuration = new promClient.Histogram({
-  name: 'offlink_http_duration_seconds',
-  help: 'Durasi response HTTP per endpoint',
-  labelNames: ['method', 'route', 'status'],
-  buckets: [0.05, 0.1, 0.3, 0.5, 1, 2, 5],
-  registers: [promRegister],
-});
-
 ed25519.etc.sha512Sync = (...msgs) => {
   const h = crypto.createHash('sha512');
   msgs.forEach(m => h.update(m));
@@ -89,9 +49,9 @@ const app  = express();
 app.set('trust proxy', 1);
 const port = process.env.PORT || 3000;
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // MIDDLEWARE
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -121,31 +81,6 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// ─── I12: catat durasi semua HTTP request ───
-app.use((req, res, next) => {
-  const end = metricHttpDuration.startTimer({ method: req.method, route: req.path });
-  res.on('finish', () => end({ status: res.statusCode }));
-  next();
-});
-
-// ─── I12: endpoint /metrics untuk Prometheus/Grafana ───
-app.get('/metrics', async (req, res) => {
-  const token = process.env.METRICS_TOKEN;
-  if (!token) return res.status(503).send('Metrics tidak dikonfigurasi');
-  const auth = (req.headers['authorization'] || '').replace('Bearer ', '');
-  if (auth !== token) return res.status(401).send('Unauthorized');
-  try {
-    const r = await pool.query(
-      `SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as total
-       FROM held_balances WHERE status = 'held'`
-    );
-    metricDanaTertahanCount.set(parseInt(r.rows[0].cnt));
-    metricDanaTertahanNominal.set(parseInt(r.rows[0].total));
-  } catch (_) {}
-  res.set('Content-Type', promRegister.contentType);
-  res.end(await promRegister.metrics());
-});
-
 // Update last_seen_at setiap device aktif
 app.use((req, res, next) => {
   const deviceId = req.body?.deviceId || req.query?.deviceId;
@@ -158,9 +93,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // RATE LIMITING
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const globalLimiter = rateLimit({
   windowMs : 60 * 1000,
   max      : 100,
@@ -190,9 +125,9 @@ const nonceLimiter = rateLimit({
   store    : new RedisStore({ sendCommand: (...args) => redisClient.call(...args) }),
 });
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ADMIN AUTH MIDDLEWARE
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function verifyAdmin(req, res, next) {
   // Coba dari cookie dulu, fallback ke Authorization header
   const token = req.cookies?.admin_token || 
@@ -207,9 +142,9 @@ function verifyAdmin(req, res, next) {
   }
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // DATABASE
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL
@@ -217,9 +152,9 @@ const pool = new Pool({
     : false,
 });
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // INIT DATABASE
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS devices (
@@ -367,11 +302,10 @@ async function initDB() {
         ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
 
       ALTER TABLE devices
-      ADD COLUMN IF NOT EXISTS fp_hash TEXT,
-      ADD COLUMN IF NOT EXISTS device_model TEXT,
-      ADD COLUMN IF NOT EXISTS manufacturer TEXT,
-      ADD COLUMN IF NOT EXISTS fp_updated_at TIMESTAMP,
-      ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP;
+        ADD COLUMN IF NOT EXISTS fp_hash TEXT,
+        ADD COLUMN IF NOT EXISTS device_model TEXT,
+        ADD COLUMN IF NOT EXISTS manufacturer TEXT,
+        ADD COLUMN IF NOT EXISTS fp_updated_at TIMESTAMP;
     `);
 
     await pool.query(`
@@ -391,40 +325,21 @@ async function initDB() {
   logger.info('âœ… Database tables ready');
 }
 
-// ─────────────────────────────────────────────
-// ROUTES – PUBLIC
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ROUTES â€” PUBLIC
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Health check
 app.get('/', (req, res) => {
   res.json({ status: 'OFFLINK Server Running', time: new Date() });
 });
 
-app.get("/chart.min.js",(req,res)=>{res.sendFile(require("path").join(__dirname,"public","chart.min.js"))});
 // Serve admin dashboard
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-// HEARTBEAT — Flutter panggil setiap 60 detik saat app terbuka
-app.post('/device/heartbeat', async (req, res) => {
-  const secret = req.headers['x-device-secret'];
-  if (secret !== process.env.DEVICE_SECRET)
-    return res.status(401).json({ error: 'Akses tidak diizinkan' });
-  const { deviceId } = req.body;
-  if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
-  try {
-    await pool.query(
-      `UPDATE devices SET last_seen_at = NOW() WHERE device_id = $1`,
-      [deviceId]
-    );
-    res.json({ success: true, serverTime: Math.floor(Date.now() / 1000) });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Server time – TrustClock
+// Server time â€” TrustClock
 app.get('/time', (req, res) => {
   res.json({ serverTime: Math.floor(Date.now() / 1000) });
 });
@@ -468,7 +383,7 @@ app.post('/device/fingerprint', async (req, res) => {
     );
     if (existing.rows.length > 0) {
       const oldHash = existing.rows[0].fp_hash;
-      // Kalau hash berubah dan bukan pertama kali – catat anomali
+      // Kalau hash berubah dan bukan pertama kali â€” catat anomali
       if (oldHash && oldHash !== fpHash) {
         await pool.query(
           `INSERT INTO audit_logs (admin_user, action, target, detail, created_at)
@@ -510,7 +425,7 @@ app.post('/nonce/verify', nonceLimiter, async (req, res) => {
   [deviceId, nonce]
 );
 if (result.rows.length === 0)
-  return res.status(409).json({ error: 'Nonce sudah dipakai – double spend terdeteksi' });
+  return res.status(409).json({ error: 'Nonce sudah dipakai â€” double spend terdeteksi' });
 res.json({ success: true, message: 'Nonce valid' });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -539,9 +454,9 @@ app.post('/tx/check', txLimiter, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 3b. Update saldo device
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/device/balance', async (req, res) => {
   const { deviceId, balance, heldBalance } = req.body;
   if (!deviceId || balance === undefined)
@@ -559,9 +474,9 @@ app.post('/device/balance', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // 3c. Ambil saldo device
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/device/balance/:deviceId', async (req, res) => {
   const { deviceId } = req.params;
   try {
@@ -625,7 +540,7 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
     if (usedResult.rows.length > 0)
       return res.status(409).json({ error: 'Transaksi sudah pernah diproses' });
 
-    // Saldo dikelola lokal di HP – server hanya catat transaksi
+    // Saldo dikelola lokal di HP â€” server hanya catat transaksi
 
     // Simpan transaksi
     await pool.query(
@@ -642,10 +557,8 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
     // Cek AML otomatis
     checkAml(txId, senderId, receiverId, amount);
 
-    metricTxTotal.inc({ status: 'selesai' });
     res.json({ success: true, message: 'Transaksi tersimpan' });
   } catch (e) {
-    metricSyncErrors.inc();
     res.status(500).json({ error: e.message });
   }
 });
@@ -735,9 +648,9 @@ app.post('/topup/fee', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
-// ROUTES – ADMIN
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ROUTES â€” ADMIN
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Logout admin
 app.post('/admin/logout', (req, res) => {
@@ -816,11 +729,11 @@ app.get('/admin/devices', verifyAdmin, async (req, res) => {
       SELECT d.device_id, d.public_key, d.created_at,
              COALESCE(ds.status, 'active') as status,
              COALESCE(ds.reason, '') as reason,
-             COALESCE(u.full_name, '–') as full_name,
-             COALESCE(u.phone, '–') as phone,
-             COALESCE(d.device_model, '–') as device_model,
-             COALESCE(d.manufacturer, '–') as manufacturer,
-             COALESCE(d.fp_updated_at::text, '–') as fp_updated_at,
+             COALESCE(u.full_name, 'â€”') as full_name,
+             COALESCE(u.phone, 'â€”') as phone,
+             COALESCE(d.device_model, 'â€”') as device_model,
+             COALESCE(d.manufacturer, 'â€”') as manufacturer,
+             COALESCE(d.fp_updated_at::text, 'â€”') as fp_updated_at,
              (SELECT COUNT(*) FROM transactions
               WHERE sender_id = d.device_id OR receiver_id = d.device_id) as tx_count
       FROM devices d
@@ -945,9 +858,9 @@ app.post('/admin/users/unblock', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─────────────────────────────────────────────
-// ADMIN – KYC & PENGGUNA
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ADMIN â€” KYC & PENGGUNA
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 app.get('/admin/api/users/detail/:deviceId', verifyAdmin, async (req, res) => {
   const { deviceId } = req.params;
@@ -1054,9 +967,9 @@ app.post('/admin/api/users/topup', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─────────────────────────────────────────────
-// ADMIN – AML & ANOMALI
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ADMIN â€” AML & ANOMALI
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/admin/api/aml/alerts', verifyAdmin, async (req, res) => {
   try {
     const { status, risk_level } = req.query;
@@ -1100,9 +1013,9 @@ app.post('/admin/api/aml/handle', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─────────────────────────────────────────────
-// ADMIN – AUDIT LOG
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ADMIN â€” AUDIT LOG
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/admin/api/audit-logs', verifyAdmin, async (req, res) => {
   try {
     const { limit = 50, offset = 0 } = req.query;
@@ -1114,9 +1027,9 @@ app.get('/admin/api/audit-logs', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─────────────────────────────────────────────
-// ADMIN – SYSTEM HEALTH
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ADMIN â€” SYSTEM HEALTH
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/admin/api/health', verifyAdmin, async (req, res) => {
   try {
     const dbStart = Date.now();
@@ -1134,9 +1047,9 @@ app.get('/admin/api/health', verifyAdmin, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
-// ADMIN – REKONSILIASI
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ADMIN â€” REKONSILIASI
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/admin/api/reconciliation/summary', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1151,9 +1064,9 @@ app.get('/admin/api/reconciliation/summary', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─────────────────────────────────────────────
-// ADMIN – KONFIGURASI SISTEM
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ADMIN â€” KONFIGURASI SISTEM
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/admin/api/config', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM system_config ORDER BY key');
@@ -1161,7 +1074,7 @@ app.get('/admin/api/config', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─── MAINTENANCE MODE ───
+// â”€â”€â”€ MAINTENANCE MODE â”€â”€â”€
 app.get('/admin/api/maintenance', verifyAdmin, async (req, res) => {
   try {
     const r = await pool.query("SELECT value FROM system_config WHERE key = 'maintenance_mode'");
@@ -1188,7 +1101,7 @@ app.post('/admin/api/maintenance', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─── CEK MAINTENANCE (PUBLIC – dipanggil Flutter) ───
+// â”€â”€â”€ CEK MAINTENANCE (PUBLIC â€” dipanggil Flutter) â”€â”€â”€
 app.get('/system/maintenance', async (req, res) => {
   try {
     const r = await pool.query("SELECT value FROM system_config WHERE key = 'maintenance_mode'");
@@ -1249,9 +1162,9 @@ app.get('/device/status/:deviceId', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
-// ADMIN – EXPORT DATA
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ADMIN â€” EXPORT DATA
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/admin/export/transactions/csv', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1290,9 +1203,9 @@ app.get('/admin/export/users/csv', verifyAdmin, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
-// ADMIN – EXPORT PDF
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ADMIN â€” EXPORT PDF
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PDFDocument = require('pdfkit');
 
 app.get('/admin/export/report/pdf', verifyAdmin, async (req, res) => {
@@ -1361,111 +1274,9 @@ app.get('/admin/export/report/pdf', verifyAdmin, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
-// ADMIN — MONITORING DASHBOARD
-// ─────────────────────────────────────────────
-app.get('/admin/monitoring', verifyAdmin, async (req, res) => {
-  try {
-    const [held, fraud, syncErr, txTotal, health] = await Promise.all([
-      pool.query(`SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as total FROM held_balances WHERE status = 'held'`),
-      pool.query(`SELECT COUNT(*) as cnt FROM aml_alerts WHERE status = 'open'`),
-      pool.query(`SELECT COUNT(*) as cnt FROM disputes WHERE status = 'pending'`),
-      pool.query(`SELECT COUNT(*) as cnt FROM transactions`),
-      pool.query(`SELECT 1`),
-    ]);
-
-    const metrics = await promRegister.getMetricsAsJSON();
-    const txCounter = metrics.find(m => m.name === 'offlink_tx_total');
-    const syncErrCounter = metrics.find(m => m.name === 'offlink_sync_errors_total');
-    const fraudCounter = metrics.find(m => m.name === 'offlink_fraud_total');
-    const httpHist = metrics.find(m => m.name === 'offlink_http_duration_seconds');
-
-    const txSinceRestart = txCounter?.values?.reduce((a, b) => a + (b.value || 0), 0) || 0;
-    const syncErrSinceRestart = syncErrCounter?.values?.[0]?.value || 0;
-    const fraudSinceRestart = fraudCounter?.values?.[0]?.value || 0;
-
-    // Hitung rata-rata durasi dari histogram
-    let avgDuration = '–';
-    if (httpHist?.values) {
-      const sumVal = httpHist.values.find(v => v.metricName === 'offlink_http_duration_seconds_sum');
-      const cntVal = httpHist.values.find(v => v.metricName === 'offlink_http_duration_seconds_count');
-      if (sumVal && cntVal && cntVal.value > 0) {
-        avgDuration = ((sumVal.value / cntVal.value) * 1000).toFixed(0) + ' ms';
-      }
-    }
-
-    res.send(`<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta http-equiv="refresh" content="30">
-<title>Monitoring – Offlink</title>
-<style>
-  body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 24px; }
-  h1 { font-size: 20px; margin-bottom: 4px; color: #f8fafc; }
-  .sub { font-size: 12px; color: #64748b; margin-bottom: 24px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-  .card { background: #1e293b; border-radius: 10px; padding: 20px; }
-  .card .label { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
-  .card .value { font-size: 28px; font-weight: bold; color: #f1f5f9; }
-  .card .sub2 { font-size: 11px; color: #64748b; margin-top: 4px; }
-  .red .value { color: #f87171; }
-  .yellow .value { color: #fbbf24; }
-  .green .value { color: #34d399; }
-  .back { display: inline-block; margin-bottom: 16px; font-size: 13px; color: #60a5fa; text-decoration: none; }
-</style>
-</head>
-<body>
-<a href="/admin" class="back">← Kembali ke Dashboard</a>
-<h1>📊 Monitoring Sistem</h1>
-<p class="sub">Auto-refresh setiap 30 detik &nbsp;|&nbsp; ${new Date().toLocaleString('id-ID')}</p>
-<div class="grid">
-  <div class="card green">
-    <div class="label">Total Transaksi</div>
-    <div class="value">${parseInt(txTotal.rows[0].cnt).toLocaleString('id-ID')}</div>
-    <div class="sub2">Sejak server restart: +${txSinceRestart}</div>
-  </div>
-  <div class="card ${parseInt(held.rows[0].cnt) > 0 ? 'yellow' : 'green'}">
-    <div class="label">Dana Tertahan</div>
-    <div class="value">${parseInt(held.rows[0].cnt)}</div>
-    <div class="sub2">Rp ${parseInt(held.rows[0].total).toLocaleString('id-ID')}</div>
-  </div>
-  <div class="card ${parseInt(fraud.rows[0].cnt) > 0 ? 'red' : 'green'}">
-    <div class="label">Alert AML Terbuka</div>
-    <div class="value">${parseInt(fraud.rows[0].cnt)}</div>
-    <div class="sub2">Inkonsistensi sejak restart: ${fraudSinceRestart}</div>
-  </div>
-  <div class="card ${parseInt(syncErr.rows[0].cnt) > 0 ? 'yellow' : 'green'}">
-    <div class="label">Dispute Pending</div>
-    <div class="value">${parseInt(syncErr.rows[0].cnt)}</div>
-    <div class="sub2">Perlu tindakan admin</div>
-  </div>
-  <div class="card ${syncErrSinceRestart > 0 ? 'red' : 'green'}">
-    <div class="label">Sync Error</div>
-    <div class="value">${syncErrSinceRestart}</div>
-    <div class="sub2">Sejak server restart</div>
-  </div>
-  <div class="card">
-    <div class="label">Avg Response Time</div>
-    <div class="value" style="font-size:22px">${avgDuration}</div>
-    <div class="sub2">Rata-rata semua endpoint</div>
-  </div>
-  <div class="card green">
-    <div class="label">Server</div>
-    <div class="value" style="font-size:18px">✅ Online</div>
-    <div class="sub2">Uptime ${Math.floor(process.uptime() / 60)} menit</div>
-  </div>
-</div>
-</body>
-</html>`);
-  } catch (e) {
-    res.status(500).send('Error: ' + e.message);
-  }
-});
-
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // AML OTOMATIS
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function checkAml(txId, senderId, receiverId, amount) {
   try {
     // Aturan 1: Transaksi besar > Rp 500.000 (per transaksi, tanpa batas waktu)
@@ -1524,9 +1335,9 @@ async function checkAml(txId, senderId, receiverId, amount) {
   }
 }
 
-// ─────────────────────────────────────────────
-// ADMIN – HISTORY TRANSAKSI DETAIL
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ADMIN â€” HISTORY TRANSAKSI DETAIL
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/admin/api/transactions/detail', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1567,9 +1378,9 @@ app.get('/admin/api/transactions/detail/:deviceId', verifyAdmin, async (req, res
   }
 });
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // HELD BALANCES & TX EVENTS
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Catat dana tertahan per transaksi
 app.post('/tx/held', async (req, res) => {
@@ -1658,9 +1469,9 @@ app.get('/tx/events/:txId', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // PENGADUAN DIPERKUAT
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Buat pengaduan dengan bukti histori
 app.post('/dispute/report', async (req, res) => {
@@ -1683,7 +1494,6 @@ app.post('/dispute/report', async (req, res) => {
       [txId]
     );
     const txFoundOnServer = txCheck.rows.length > 0;
-    if (txFoundOnServer) metricFraud.inc(); // I12: HP B sudah terima tapi HP A tidak selesai
 
     const deadline = issuedAt
       ? new Date(issuedAt * 1000 + 14 * 24 * 60 * 60 * 1000)
@@ -1736,9 +1546,9 @@ app.post('/dispute/report', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // DISPUTE MESSAGES (SISTEM PESAN PENGADUAN)
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Generate nomor tiket otomatis
 function generateTicketNumber() {
@@ -1928,7 +1738,7 @@ app.get('/admin/api/dispute/messages/:disputeId', verifyAdmin, async (req, res) 
   }
 });
 
-// ADMIN – HELD BALANCES
+// ADMIN â€” HELD BALANCES
 app.get('/admin/api/held-balances', verifyAdmin, async (req, res) => {
   try {
     const status = req.query.status || null;
@@ -1945,7 +1755,7 @@ app.get('/admin/api/held-balances', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ADMIN – DISPUTES DETAIL
+// ADMIN â€” DISPUTES DETAIL
 app.get('/admin/api/disputes/detail', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1958,7 +1768,7 @@ app.get('/admin/api/disputes/detail', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ADMIN – RESOLVE DISPUTE
+// ADMIN â€” RESOLVE DISPUTE
 app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
   const { disputeId, decision, adminNote } = req.body;
   if (!disputeId || !decision)
@@ -1993,9 +1803,9 @@ app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // START SERVER
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 initDB().then(() => {
   const port = process.env.PORT || 3000;
   app.listen(port, () => {

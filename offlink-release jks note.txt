@@ -1,0 +1,10 @@
+offlink realease. jks
+
+paswrod : Alifiandra_123@
+
+File: offlink-release.jks
+Alias: offlink
+Password keystore: Alifiandra_123@
+Password key: Alifiandra_123@
+Dibuat: 3 Juni 2026
+Oleh: Muhamad Riansyah Pratama
