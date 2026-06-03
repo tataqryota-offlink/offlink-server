@@ -2031,14 +2031,17 @@ app.post('/device/balance/sync', async (req, res) => {
       const danaTertahan = parseInt(heldBalance ?? 0);
       const selisih = saldoHP - ekspektasi;
 
-      // Validasi 2 arah
+      // Validasi 2 arah — hanya jika device sudah ada di DB dan ada transaksi
       let isAnomali = false;
       let alasanAnomali = '';
 
-      if (selisih > danaTertahan) {
+      const deviceExists = deviceResult.rows.length > 0;
+      const adaTransaksi = ledger && Array.isArray(ledger) && ledger.length > 0;
+
+      if (deviceExists && adaTransaksi && selisih > danaTertahan) {
         isAnomali = true;
         alasanAnomali = `Saldo HP lebih Rp${selisih} dari ekspektasi, dana tertahan hanya Rp${danaTertahan}`;
-      } else if (selisih < 0 && Math.abs(selisih) > danaTertahan) {
+      } else if (deviceExists && adaTransaksi && selisih < 0 && Math.abs(selisih) > danaTertahan) {
         isAnomali = true;
         alasanAnomali = `Saldo HP kurang Rp${Math.abs(selisih)} dari ekspektasi, dana tertahan hanya Rp${danaTertahan}`;
       }
