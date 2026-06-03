@@ -2004,47 +2004,73 @@ app.post('/device/balance/sync', async (req, res) => {
     return res.status(400).json({ error: 'deviceId dan balance wajib diisi' });
 
   try {
-    // Hitung saldo dari histori ledger yang dikirim HP
-    let calculatedBalance = 0;
-    if (ledger && Array.isArray(ledger)) {
-      for (const tx of ledger) {
-        if (tx.status !== 'CONFIRMED') continue;
-        if (tx.direction === 'RECEIVED') calculatedBalance += tx.amount;
-        if (tx.direction === 'SENT') calculatedBalance -= tx.amount;
+      // Hitung total masuk dan keluar dari ledger HP
+      let totalMasuk = 0;
+      let totalKeluar = 0;
+
+      if (ledger && Array.isArray(ledger)) {
+        for (const tx of ledger) {
+          if (tx.status !== 'CONFIRMED') continue;
+          if (tx.direction === 'RECEIVED') totalMasuk += tx.amount;
+          if (tx.direction === 'SENT') totalKeluar += tx.amount;
+        }
       }
-    }
 
-    // Ambil saldo awal (topup) dari server
-    const deviceResult = await pool.query(
-      'SELECT balance FROM devices WHERE device_id = $1',
-      [deviceId]
-    );
-    
-    // Cek selisih — toleransi 0
-    const sentBalance = parseInt(balance);
-    const diff = Math.abs(sentBalance - calculatedBalance);
-
-    // Kalau selisih > 10% dari saldo — flag anomali
-    if (ledger && Array.isArray(ledger) && ledger.length > 0 && diff > sentBalance * 0.1) {
-      await pool.query(
-        `INSERT INTO aml_alerts (device_id, alert_type, detail, risk_level, status)
-         VALUES ($1, 'BALANCE_ANOMALY', $2, 'high', 'open')`,
-        [deviceId, JSON.stringify({
-          balanceFromHP: sentBalance,
-          balanceCalculated: calculatedBalance,
-          diff,
-          txCount: ledger.length
-        })]
+      // Ambil saldo terakhir di server (sebelum sync ini)
+      const deviceResult = await pool.query(
+        'SELECT balance FROM devices WHERE device_id = $1',
+        [deviceId]
       );
-    }
+      const saldoServer = deviceResult.rows.length > 0
+        ? parseInt(deviceResult.rows[0].balance)
+        : 0;
 
-    // Update saldo server mengikuti HP
-    await pool.query(
-      `UPDATE devices SET balance = $1, held_balance = $2 WHERE device_id = $3`,
-      [sentBalance, heldBalance ?? 0, deviceId]
-    );
+      // Hitung ekspektasi saldo
+      const ekspektasi = saldoServer + totalMasuk - totalKeluar;
+      const saldoHP = parseInt(balance);
+      const danaTertahan = parseInt(heldBalance ?? 0);
+      const selisih = saldoHP - ekspektasi;
 
-    res.json({ success: true, validated: diff === 0 });
+      // Validasi 2 arah
+      let isAnomali = false;
+      let alasanAnomali = '';
+
+      if (selisih > danaTertahan) {
+        isAnomali = true;
+        alasanAnomali = `Saldo HP lebih Rp${selisih} dari ekspektasi, dana tertahan hanya Rp${danaTertahan}`;
+      } else if (selisih < 0 && Math.abs(selisih) > danaTertahan) {
+        isAnomali = true;
+        alasanAnomali = `Saldo HP kurang Rp${Math.abs(selisih)} dari ekspektasi, dana tertahan hanya Rp${danaTertahan}`;
+      }
+
+      if (isAnomali) {
+        await pool.query(
+          `INSERT INTO aml_alerts (device_id, alert_type, detail, risk_level, status)
+           VALUES ($1, 'BALANCE_ANOMALY', $2, 'high', 'open')`,
+          [deviceId, JSON.stringify({
+            saldoHP,
+            saldoServer,
+            ekspektasi,
+            totalMasuk,
+            totalKeluar,
+            danaTertahan,
+            selisih,
+            alasan: alasanAnomali
+          })]
+        );
+      }
+
+      // Update saldo server mengikuti HP
+      await pool.query(
+        `UPDATE devices SET balance = $1, held_balance = $2 WHERE device_id = $3`,
+        [saldoHP, danaTertahan, deviceId]
+      );
+
+      res.json({
+        success: true,
+        anomali: isAnomali,
+        pesan: isAnomali ? alasanAnomali : 'Saldo valid'
+      });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
