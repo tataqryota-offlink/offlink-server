@@ -1203,8 +1203,8 @@ app.post('/device/userdata', async (req, res) => {
   if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
   try {
     await pool.query(
-      `INSERT INTO devices (device_id, balance, held_balance)
-       VALUES ($1, 0, 0)
+      `INSERT INTO devices (device_id, public_key, balance, held_balance)
+       VALUES ($1, $1, 0, 0)
        ON CONFLICT (device_id) DO NOTHING`,
       [deviceId]
     );
