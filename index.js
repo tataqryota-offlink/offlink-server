@@ -1,5 +1,5 @@
 ﻿// ============================================================
-// OFFLINK SERVER – Backend API
+// OFFLINK SERVER â€” Backend API
 // ============================================================
 
 require('dotenv').config();
@@ -28,7 +28,7 @@ const promRegister = new promClient.Registry();
 promRegister.setDefaultLabels({ app: 'offlink' });
 
 // ─────────────────────────────────────────────
-// LOGGER – Winston structured logging
+// LOGGER â€” Winston structured logging
 // ─────────────────────────────────────────────
 const winston = require('winston');
 const logger = winston.createLogger({
@@ -367,11 +367,10 @@ async function initDB() {
         ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';
 
       ALTER TABLE devices
-      ADD COLUMN IF NOT EXISTS fp_hash TEXT,
-      ADD COLUMN IF NOT EXISTS device_model TEXT,
-      ADD COLUMN IF NOT EXISTS manufacturer TEXT,
-      ADD COLUMN IF NOT EXISTS fp_updated_at TIMESTAMP,
-      ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP;
+        ADD COLUMN IF NOT EXISTS fp_hash TEXT,
+        ADD COLUMN IF NOT EXISTS device_model TEXT,
+        ADD COLUMN IF NOT EXISTS manufacturer TEXT,
+        ADD COLUMN IF NOT EXISTS fp_updated_at TIMESTAMP;
     `);
 
     await pool.query(`
@@ -392,7 +391,7 @@ async function initDB() {
 }
 
 // ─────────────────────────────────────────────
-// ROUTES – PUBLIC
+// ROUTES â€” PUBLIC
 // ─────────────────────────────────────────────
 
 // Health check
@@ -406,25 +405,7 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-// HEARTBEAT — Flutter panggil setiap 60 detik saat app terbuka
-app.post('/device/heartbeat', async (req, res) => {
-  const secret = req.headers['x-device-secret'];
-  if (secret !== process.env.DEVICE_SECRET)
-    return res.status(401).json({ error: 'Akses tidak diizinkan' });
-  const { deviceId } = req.body;
-  if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
-  try {
-    await pool.query(
-      `UPDATE devices SET last_seen_at = NOW() WHERE device_id = $1`,
-      [deviceId]
-    );
-    res.json({ success: true, serverTime: Math.floor(Date.now() / 1000) });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Server time – TrustClock
+// Server time â€” TrustClock
 app.get('/time', (req, res) => {
   res.json({ serverTime: Math.floor(Date.now() / 1000) });
 });
@@ -468,7 +449,7 @@ app.post('/device/fingerprint', async (req, res) => {
     );
     if (existing.rows.length > 0) {
       const oldHash = existing.rows[0].fp_hash;
-      // Kalau hash berubah dan bukan pertama kali – catat anomali
+      // Kalau hash berubah dan bukan pertama kali â€” catat anomali
       if (oldHash && oldHash !== fpHash) {
         await pool.query(
           `INSERT INTO audit_logs (admin_user, action, target, detail, created_at)
@@ -510,7 +491,7 @@ app.post('/nonce/verify', nonceLimiter, async (req, res) => {
   [deviceId, nonce]
 );
 if (result.rows.length === 0)
-  return res.status(409).json({ error: 'Nonce sudah dipakai – double spend terdeteksi' });
+  return res.status(409).json({ error: 'Nonce sudah dipakai â€” double spend terdeteksi' });
 res.json({ success: true, message: 'Nonce valid' });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -625,7 +606,7 @@ app.post('/tx/sync', txLimiter, async (req, res) => {
     if (usedResult.rows.length > 0)
       return res.status(409).json({ error: 'Transaksi sudah pernah diproses' });
 
-    // Saldo dikelola lokal di HP – server hanya catat transaksi
+    // Saldo dikelola lokal di HP â€” server hanya catat transaksi
 
     // Simpan transaksi
     await pool.query(
@@ -736,7 +717,7 @@ app.post('/topup/fee', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ROUTES – ADMIN
+// ROUTES â€” ADMIN
 // ─────────────────────────────────────────────
 
 // Logout admin
@@ -816,11 +797,11 @@ app.get('/admin/devices', verifyAdmin, async (req, res) => {
       SELECT d.device_id, d.public_key, d.created_at,
              COALESCE(ds.status, 'active') as status,
              COALESCE(ds.reason, '') as reason,
-             COALESCE(u.full_name, '–') as full_name,
-             COALESCE(u.phone, '–') as phone,
-             COALESCE(d.device_model, '–') as device_model,
-             COALESCE(d.manufacturer, '–') as manufacturer,
-             COALESCE(d.fp_updated_at::text, '–') as fp_updated_at,
+             COALESCE(u.full_name, 'â€”') as full_name,
+             COALESCE(u.phone, 'â€”') as phone,
+             COALESCE(d.device_model, 'â€”') as device_model,
+             COALESCE(d.manufacturer, 'â€”') as manufacturer,
+             COALESCE(d.fp_updated_at::text, 'â€”') as fp_updated_at,
              (SELECT COUNT(*) FROM transactions
               WHERE sender_id = d.device_id OR receiver_id = d.device_id) as tx_count
       FROM devices d
@@ -946,7 +927,7 @@ app.post('/admin/users/unblock', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN – KYC & PENGGUNA
+// ADMIN â€” KYC & PENGGUNA
 // ─────────────────────────────────────────────
 
 app.get('/admin/api/users/detail/:deviceId', verifyAdmin, async (req, res) => {
@@ -1055,7 +1036,7 @@ app.post('/admin/api/users/topup', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN – AML & ANOMALI
+// ADMIN â€” AML & ANOMALI
 // ─────────────────────────────────────────────
 app.get('/admin/api/aml/alerts', verifyAdmin, async (req, res) => {
   try {
@@ -1101,7 +1082,7 @@ app.post('/admin/api/aml/handle', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN – AUDIT LOG
+// ADMIN â€” AUDIT LOG
 // ─────────────────────────────────────────────
 app.get('/admin/api/audit-logs', verifyAdmin, async (req, res) => {
   try {
@@ -1115,7 +1096,7 @@ app.get('/admin/api/audit-logs', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN – SYSTEM HEALTH
+// ADMIN â€” SYSTEM HEALTH
 // ─────────────────────────────────────────────
 app.get('/admin/api/health', verifyAdmin, async (req, res) => {
   try {
@@ -1135,7 +1116,7 @@ app.get('/admin/api/health', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN – REKONSILIASI
+// ADMIN â€” REKONSILIASI
 // ─────────────────────────────────────────────
 app.get('/admin/api/reconciliation/summary', verifyAdmin, async (req, res) => {
   try {
@@ -1152,7 +1133,7 @@ app.get('/admin/api/reconciliation/summary', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN – KONFIGURASI SISTEM
+// ADMIN â€” KONFIGURASI SISTEM
 // ─────────────────────────────────────────────
 app.get('/admin/api/config', verifyAdmin, async (req, res) => {
   try {
@@ -1188,7 +1169,7 @@ app.post('/admin/api/maintenance', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─── CEK MAINTENANCE (PUBLIC – dipanggil Flutter) ───
+// ─── CEK MAINTENANCE (PUBLIC â€” dipanggil Flutter) ───
 app.get('/system/maintenance', async (req, res) => {
   try {
     const r = await pool.query("SELECT value FROM system_config WHERE key = 'maintenance_mode'");
@@ -1222,6 +1203,12 @@ app.post('/device/userdata', async (req, res) => {
   if (!deviceId) return res.status(400).json({ error: 'deviceId wajib diisi' });
   try {
     await pool.query(
+      `INSERT INTO devices (device_id, balance, held_balance)
+       VALUES ($1, 0, 0)
+       ON CONFLICT (device_id) DO NOTHING`,
+      [deviceId]
+    );
+    await pool.query(
       `INSERT INTO users (device_id, full_name, phone, kyc_status)
        VALUES ($1, $2, $3, 'unverified')
        ON CONFLICT (device_id) DO UPDATE
@@ -1250,7 +1237,7 @@ app.get('/device/status/:deviceId', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN – EXPORT DATA
+// ADMIN â€” EXPORT DATA
 // ─────────────────────────────────────────────
 app.get('/admin/export/transactions/csv', verifyAdmin, async (req, res) => {
   try {
@@ -1291,7 +1278,7 @@ app.get('/admin/export/users/csv', verifyAdmin, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// ADMIN – EXPORT PDF
+// ADMIN â€” EXPORT PDF
 // ─────────────────────────────────────────────
 const PDFDocument = require('pdfkit');
 
@@ -1525,7 +1512,7 @@ async function checkAml(txId, senderId, receiverId, amount) {
 }
 
 // ─────────────────────────────────────────────
-// ADMIN – HISTORY TRANSAKSI DETAIL
+// ADMIN â€” HISTORY TRANSAKSI DETAIL
 // ─────────────────────────────────────────────
 app.get('/admin/api/transactions/detail', verifyAdmin, async (req, res) => {
   try {
@@ -1928,7 +1915,7 @@ app.get('/admin/api/dispute/messages/:disputeId', verifyAdmin, async (req, res) 
   }
 });
 
-// ADMIN – HELD BALANCES
+// ADMIN â€” HELD BALANCES
 app.get('/admin/api/held-balances', verifyAdmin, async (req, res) => {
   try {
     const status = req.query.status || null;
@@ -1945,7 +1932,7 @@ app.get('/admin/api/held-balances', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ADMIN – DISPUTES DETAIL
+// ADMIN â€” DISPUTES DETAIL
 app.get('/admin/api/disputes/detail', verifyAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1958,7 +1945,7 @@ app.get('/admin/api/disputes/detail', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ADMIN – RESOLVE DISPUTE
+// ADMIN â€” RESOLVE DISPUTE
 app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
   const { disputeId, decision, adminNote } = req.body;
   if (!disputeId || !decision)
@@ -1991,92 +1978,6 @@ app.post('/admin/api/disputes/resolve', verifyAdmin, async (req, res) => {
     }
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Sinkronisasi saldo dari HP ke server
-app.post('/device/balance/sync', async (req, res) => {
-  const secret = req.headers['x-device-secret'];
-  if (secret !== process.env.DEVICE_SECRET)
-    return res.status(401).json({ error: 'Akses tidak diizinkan' });
-
-  const { deviceId, balance, heldBalance, ledger } = req.body;
-  if (!deviceId || balance === undefined)
-    return res.status(400).json({ error: 'deviceId dan balance wajib diisi' });
-
-  try {
-      // Hitung total masuk dan keluar dari ledger HP
-      let totalMasuk = 0;
-      let totalKeluar = 0;
-
-      if (ledger && Array.isArray(ledger)) {
-        for (const tx of ledger) {
-          if (tx.status !== 'CONFIRMED') continue;
-          if (tx.direction === 'RECEIVED') totalMasuk += tx.amount;
-          if (tx.direction === 'SENT') totalKeluar += tx.amount;
-        }
-      }
-
-      // Ambil saldo terakhir di server (sebelum sync ini)
-      const deviceResult = await pool.query(
-        'SELECT balance FROM devices WHERE device_id = $1',
-        [deviceId]
-      );
-      const saldoServer = deviceResult.rows.length > 0
-        ? parseInt(deviceResult.rows[0].balance)
-        : 0;
-
-      // Hitung ekspektasi saldo
-      const ekspektasi = saldoServer + totalMasuk - totalKeluar;
-      const saldoHP = parseInt(balance);
-      const danaTertahan = parseInt(heldBalance ?? 0);
-      const selisih = saldoHP - ekspektasi;
-
-      // Validasi 2 arah — hanya jika device sudah ada di DB dan ada transaksi
-      let isAnomali = false;
-      let alasanAnomali = '';
-
-      const deviceExists = deviceResult.rows.length > 0;
-      const adaTransaksi = ledger && Array.isArray(ledger) && ledger.length > 0;
-
-      if (deviceExists && adaTransaksi && selisih > danaTertahan) {
-        isAnomali = true;
-        alasanAnomali = `Saldo HP lebih Rp${selisih} dari ekspektasi, dana tertahan hanya Rp${danaTertahan}`;
-      } else if (deviceExists && adaTransaksi && selisih < 0 && Math.abs(selisih) > danaTertahan) {
-        isAnomali = true;
-        alasanAnomali = `Saldo HP kurang Rp${Math.abs(selisih)} dari ekspektasi, dana tertahan hanya Rp${danaTertahan}`;
-      }
-
-      if (isAnomali) {
-        await pool.query(
-          `INSERT INTO aml_alerts (device_id, alert_type, detail, risk_level, status)
-           VALUES ($1, 'BALANCE_ANOMALY', $2, 'high', 'open')`,
-          [deviceId, JSON.stringify({
-            saldoHP,
-            saldoServer,
-            ekspektasi,
-            totalMasuk,
-            totalKeluar,
-            danaTertahan,
-            selisih,
-            alasan: alasanAnomali
-          })]
-        );
-      }
-
-      // Update saldo server mengikuti HP
-      await pool.query(
-        `UPDATE devices SET balance = $1, held_balance = $2 WHERE device_id = $3`,
-        [saldoHP, danaTertahan, deviceId]
-      );
-
-      res.json({
-        success: true,
-        anomali: isAnomali,
-        pesan: isAnomali ? alasanAnomali : 'Saldo valid'
-      });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
 });
 
 // ─────────────────────────────────────────────
