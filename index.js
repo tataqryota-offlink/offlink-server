@@ -1221,6 +1221,52 @@ app.post('/device/userdata', async (req, res) => {
   }
 });
 
+// Pulihkan akun — pindah saldo dari device lama ke device baru berdasarkan nomor HP
+app.post('/device/recover', async (req, res) => {
+  const { newDeviceId, phone } = req.body;
+  if (!newDeviceId || !phone) return res.status(400).json({ error: 'newDeviceId dan phone wajib diisi' });
+  try {
+    // Cari device lama berdasarkan nomor HP
+    const userResult = await pool.query(
+      'SELECT device_id FROM users WHERE phone = $1',
+      [phone]
+    );
+    if (userResult.rows.length === 0)
+      return res.status(404).json({ error: 'Nomor HP tidak ditemukan' });
+    const oldDeviceId = userResult.rows[0].device_id;
+    if (oldDeviceId === newDeviceId)
+      return res.json({ success: true, message: 'Device sama, tidak perlu recover' });
+    // Ambil saldo device lama
+    const balResult = await pool.query(
+      'SELECT balance, held_balance FROM devices WHERE device_id = $1',
+      [oldDeviceId]
+    );
+    const oldBalance = balResult.rows.length > 0 ? balResult.rows[0].balance : 0;
+    const oldHeld    = balResult.rows.length > 0 ? balResult.rows[0].held_balance : 0;
+    // Buat device baru dengan saldo lama
+    await pool.query(
+      `INSERT INTO devices (device_id, public_key, balance, held_balance)
+       VALUES ($1, $1, $2, $3)
+       ON CONFLICT (device_id) DO UPDATE
+       SET balance = $2, held_balance = $3`,
+      [newDeviceId, oldBalance, oldHeld]
+    );
+    // Update users — ganti device_id lama ke baru
+    await pool.query(
+      'UPDATE users SET device_id = $1 WHERE phone = $2',
+      [newDeviceId, phone]
+    );
+    // Nonaktifkan device lama
+    await pool.query(
+      'UPDATE devices SET balance = 0, held_balance = 0 WHERE device_id = $1',
+      [oldDeviceId]
+    );
+    res.json({ success: true, balance: oldBalance, heldBalance: oldHeld });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Cek status device
 app.get('/device/status/:deviceId', async (req, res) => {
   try {
